@@ -1,3 +1,4 @@
+from .Background import Background
 from .Scoreboard import Scoreboard
 from .UIBoss import UIBoss
 from .FPSCounter import FPSCounter

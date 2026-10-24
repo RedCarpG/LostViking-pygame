@@ -14,6 +14,7 @@ from src.game.player import *
 from src.game.ui import *
 from src.game.supply import *
 from src.game.level import *
+from src.game.animation import ScreenShake
 from src.util.type import Pos
 
 
@@ -54,9 +55,14 @@ class Game:
         self.scoreboard = Scoreboard(self.screen)
         self.fps_counter = FPSCounter(
             self.screen, self.clock, [SCREEN_WIDTH-100, 30])
+        # FPS counter is a debug tool, toggled with F3
+        self.show_fps = False
+        self.background = Background()
+        # The world is drawn here instead of the screen while it shakes
+        self.world_surface = pygame.Surface(SCREEN_SIZE).convert()
         # Dark layer drawn over the frozen game behind menus
         self.overlay = pygame.Surface(SCREEN_SIZE, SRCALPHA)
-        self.overlay.fill((0, 0, 0, 160))
+        self.overlay.fill((4, 6, 16, 190))
 
         # Level
         self.level = Level1()
@@ -104,8 +110,9 @@ class Game:
                 self.level.start()
 
         G_Players.update()
+        self.background.update()
 
-        self.screen.fill(COLOR.BLACK)
+        self.background.draw(self.screen)
         self.ui_intro.blit()
         G_Players.draw(self.screen)
 
@@ -121,6 +128,8 @@ class Game:
             # --------------- Key Up Events ---------------
             elif event.type == KEYUP and event.key == K_TAB:
                 self.ui.toggle_hidden()
+            elif event.type == KEYUP and event.key == K_F3:
+                self.show_fps = not self.show_fps
             elif event.type == KEYUP and event.key == K_ESCAPE:
                 self.pause()
             # --------------- Window Events ---------------
@@ -137,6 +146,8 @@ class Game:
         G_Enemys.update()
         G_Bomb.update()
         G_Effects.update()
+        self.background.update()
+        ScreenShake.update()
         self.scoreboard.update()
         self.fps_counter.update()
         self.ui.update()
@@ -179,17 +190,28 @@ class Game:
     # ------------------ Helpers ------------------
 
     def _draw_world(self):
-        self.screen.fill(COLOR.BLACK)
-        self.scoreboard.blit()
-        self.fps_counter.blit()
-        G_Bomb.draw(self.screen)
-        G_Enemy_Bullets.draw(self.screen)
-        G_Player_Bullets.draw(self.screen)
-        G_Enemys.draw(self.screen)
-        G_Players.draw(self.screen)
-        G_Supplies.draw(self.screen)
-        G_Effects.draw(self.screen)
+        # Only draw off screen while shaking, so a still frame costs no extra blit
+        shaking = ScreenShake.is_shaking()
+        target = self.world_surface if shaking else self.screen
+
+        self.background.draw(target)
+        G_Bomb.draw(target)
+        G_Enemy_Bullets.draw(target)
+        G_Player_Bullets.draw(target)
+        G_Enemys.draw(target)
+        G_Players.draw(target)
+        G_Supplies.draw(target)
+        G_Effects.draw(target)
+
+        if shaking:
+            self.screen.fill(Background.BASE_COLOR)
+            self.screen.blit(self.world_surface, ScreenShake.offset)
+
+        # HUD on top of the sprites, it does not shake
         self.ui.blit()
+        self.scoreboard.blit()
+        if self.show_fps:
+            self.fps_counter.blit()
 
     def _check_round_end(self):
         if self._count_end_delay > 0:
@@ -244,6 +266,7 @@ class Game:
         pygame.mixer.unpause()
         pygame.mixer.stop()
         supply_event_config()
+        ScreenShake.reset()
 
         # Kill every sprite so it also leaves the per-class groups (e.g. EnemyScout.GROUP)
         for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Enemys,

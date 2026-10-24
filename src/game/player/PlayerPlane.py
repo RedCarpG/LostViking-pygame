@@ -16,7 +16,7 @@ from src.util.inertial import accelerate, decelerate
 from src.helper.sound import play_sound
 
 from src.game.groups import G_Enemys, G_Enemy_Bullets, G_Players
-from src.game.animation import AnimeSprite
+from src.game.animation import AnimeSprite, ScreenShake
 from src.game.animation.Effect import AttachEffect
 from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB
 from .player_control import PLAYER1_CONTROL, PLAYER2_CONTROL
@@ -48,6 +48,10 @@ class PlayerPlane(AnimeSprite):
     INVINCIBLE_DURATION = 100
 
     LIMIT_BOTTOM = 100
+
+    # Screen shake trauma (see ScreenShake)
+    SHAKE_HIT = 0.5
+    SHAKE_DESTROY = 0.8
 
     def __init__(self, weapon: PlayerWeapon, pos, frames, frame_size, id=1):
         # Init
@@ -154,6 +158,7 @@ class PlayerPlane(AnimeSprite):
         self._is_moving_x = False
         self.set_anime_state("DESTROY")
         play_sound("PLAYER_DESTROY")
+        ScreenShake.add(self.SHAKE_DESTROY)
 
     # ------------------ Battle
     def hit(self, damage=100, **kwargs) -> bool:
@@ -172,6 +177,7 @@ class PlayerPlane(AnimeSprite):
                     },
                     frame_size=self.frame_size
                 )
+                ScreenShake.add(self.SHAKE_HIT)
             else:
                 # HP below 0
                 self.destroy()
@@ -205,9 +211,14 @@ class PlayerPlane(AnimeSprite):
     def collide_enemy(self, enemy_group):
         enemy = spritecollideany(self, enemy_group, collide_detect(0.5))
         if enemy and enemy.is_active and not self.is_invincible:
-            self._score += enemy.score
-            self.destroy()
-            enemy.destroy()
+            # Each enemy decides how much a collision hurts (see EnemyI.COLLIDE_DAMAGE)
+            if enemy.COLLIDE_DAMAGE is None:
+                self.destroy()
+            else:
+                self.hit(enemy.COLLIDE_DAMAGE)
+            enemy.collide_player()
+            if not enemy.is_active:
+                self._score += enemy.score
 
     def collide_enemy_bullet(self, enemy_bullet_group):
         bullet = spritecollideany(

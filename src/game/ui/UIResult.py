@@ -1,38 +1,37 @@
 import pygame
 from pygame.locals import *
-from src.helper.image import get_image
-from src.helper.font import load_font, get_font, FontEntity
+from src.helper.font import load_font, get_font, render_text
 from src.util.type import Pos
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_RESTART
-from .Button import Button
+from .Button import Button, text_button_frames
 
 
 class UIResult:
     """ Result screen shown at the end of a round (game over or victory) """
 
+    LABEL_COLOR = (130, 145, 185)
+    VICTORY_GLOW = (255, 180, 50)
+    GAME_OVER_GLOW = (255, 40, 40)
+
     def __init__(self, surface) -> None:
-        load_font("arialbd.ttf", 80, "ResultTitle")
-        load_font("arialbd.ttf", 30, "ResultText")
+        load_font("arialbd.ttf", 48, "ResultScore")
         self.surface = surface
 
-        self.title_text = FontEntity(self.surface, get_font("ResultTitle"),
-                                     "", color=COLOR.WHITE)
-        self.score_text = FontEntity(self.surface, get_font("ResultText"),
-                                     "", color=COLOR.WHITE)
-        self.best_text = FontEntity(self.surface, get_font("ResultText"),
-                                    "", color=COLOR.GRAY)
+        self.title = ""
+        self.title_text = None
+        self.score_label = render_text(get_font("ScoreLabel"), "SCORE",
+                                       self.LABEL_COLOR, spacing=4)
+        self.score_text = None
+        self.best_text = None
 
         def restart_game(button):
             pygame.event.post(pygame.event.Event(EVENT_RESTART))
         self.button_restart = Button(
             self.surface,
             function=restart_game,
-            frames={
-                "IDLE": get_image("UI/Pause/Restart0.png"),
-                "CHOSEN": get_image("UI/Pause/Restart1.png")
-            },
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 100])
+            frames=text_button_frames("RESTART"),
+            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 70])
         )
 
         def end_game(button):
@@ -40,11 +39,8 @@ class UIResult:
         self.button_exit = Button(
             self.surface,
             function=end_game,
-            frames={
-                "IDLE": get_image("UI/Pause/Exit0.png"),
-                "CHOSEN": get_image("UI/Pause/Exit1.png")
-            },
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 200])
+            frames=text_button_frames("EXIT"),
+            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 140])
         )
 
         self.buttons = [self.button_restart]
@@ -55,23 +51,33 @@ class UIResult:
 
     def show(self, is_victory: bool, score: int, best_score: int):
         if is_victory:
-            self.title_text.change_text("MISSION COMPLETE")
-            self.title_text.change_color(COLOR.WHITE)
+            self.title = "MISSION COMPLETE"
+            glow_color = self.VICTORY_GLOW
         else:
-            self.title_text.change_text("GAME OVER")
-            self.title_text.change_color(COLOR.RED)
-        self.score_text.change_text(f"Score: {score}")
-        self.best_text.change_text(f"Best: {best_score}")
-
-        self.title_text.move_center((SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 200))
-        self.score_text.move_center((SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 80))
-        self.best_text.move_center((SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 30))
+            self.title = "GAME OVER"
+            glow_color = self.GAME_OVER_GLOW
+        self.title_text = render_text(get_font("MenuTitle"), self.title, COLOR.WHITE,
+                                      spacing=8, glow_color=glow_color, glow_size=12)
+        self.score_text = render_text(get_font("ResultScore"), f"{score:,}",
+                                      COLOR.WHITE, spacing=2)
+        if score > 0 and score >= best_score:
+            self.best_text = render_text(get_font("MenuText"), "NEW BEST!",
+                                         self.VICTORY_GLOW, spacing=4)
+        else:
+            self.best_text = render_text(get_font("MenuText"), f"BEST  {best_score:,}",
+                                         self.LABEL_COLOR, spacing=4)
         self._reset_chosen()
 
     def blit(self):
-        self.title_text.blit()
-        self.score_text.blit()
-        self.best_text.blit()
+        center_x = SCREEN_WIDTH / 2
+        self.surface.blit(self.title_text, self.title_text.get_rect(
+            center=(center_x, SCREEN_HEIGHT / 2 - 210)))
+        self.surface.blit(self.score_label, self.score_label.get_rect(
+            center=(center_x, SCREEN_HEIGHT / 2 - 120)))
+        self.surface.blit(self.score_text, self.score_text.get_rect(
+            center=(center_x, SCREEN_HEIGHT / 2 - 80)))
+        self.surface.blit(self.best_text, self.best_text.get_rect(
+            center=(center_x, SCREEN_HEIGHT / 2 - 25)))
         for each in self.buttons:
             each.blit()
 

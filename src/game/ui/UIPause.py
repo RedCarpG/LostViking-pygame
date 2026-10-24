@@ -1,22 +1,21 @@
 import pygame
 from pygame.locals import *
-from src.helper.image import get_image
-from src.helper.font import load_font, get_font, FontEntity
+from src.helper.font import get_font, render_text
 from src.util.type import Pos
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_RESUME, EVENT_RESTART
-from .Button import Button
+from .Button import Button, text_button_frames
 
 
 class UIPause:
 
     def __init__(self, surface) -> None:
-        load_font("arialbd.ttf", 30, "Pause")
         self.surface = surface
 
-        self.pause_text = FontEntity(self.surface, get_font("Pause"),
-                                     ("PAUSE"), color=COLOR.WHITE)
-        self.pause_text.move_center((SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 100))
+        self.pause_text = render_text(get_font("MenuTitle"), "PAUSED", COLOR.WHITE,
+                                      spacing=10, glow_color=(60, 150, 255), glow_size=10)
+        self.pause_rect = self.pause_text.get_rect(
+            center=(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 120))
 
         def resume_game(button):
             pygame.event.post(pygame.event.Event(EVENT_RESUME))
@@ -24,11 +23,8 @@ class UIPause:
         self.button_resume = Button(
             self.surface,
             function=resume_game,
-            frames={
-                "IDLE": get_image("UI/Pause/Resume0.png"),
-                "CHOSEN": get_image("UI/Pause/Resume1.png")
-            },
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2])
+            frames=text_button_frames("RESUME"),
+            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 10])
         )
         self.button_resume.toggle_choose()
 
@@ -37,11 +33,8 @@ class UIPause:
         self.button_restart = Button(
             self.surface,
             function=restart_game,
-            frames={
-                "IDLE": get_image("UI/Pause/Restart0.png"),
-                "CHOSEN": get_image("UI/Pause/Restart1.png")
-            },
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 100])
+            frames=text_button_frames("RESTART"),
+            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 60])
         )
 
         def end_game(button):
@@ -49,11 +42,8 @@ class UIPause:
         self.button_exit = Button(
             self.surface,
             function=end_game,
-            frames={
-                "IDLE": get_image("UI/Pause/Exit0.png"),
-                "CHOSEN": get_image("UI/Pause/Exit1.png")
-            },
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 200])
+            frames=text_button_frames("EXIT"),
+            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 130])
         )
 
         self.buttons = []
@@ -68,7 +58,7 @@ class UIPause:
     def blit(self):
         for each in self.buttons:
             each.blit()
-        self.pause_text.blit()
+        self.surface.blit(self.pause_text, self.pause_rect)
 
     def handle_event(self, event):
 

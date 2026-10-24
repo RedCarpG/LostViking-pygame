@@ -22,6 +22,9 @@ class EnemyInterceptor(EnemyIII):
     ATTACK_CHANCE = 0.5
     DROP_SUPPLY_CHANCE = 0.1
 
+    # Bumping into one hurts (same as its laser) instead of destroying the player
+    COLLIDE_DAMAGE = 35
+
     MOVE_RAD = 300
 
     MOVE_BOTTOM_LIMIT = int(SCREEN_HEIGHT * 3 / 4)

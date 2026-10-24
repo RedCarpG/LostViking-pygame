@@ -1,6 +1,34 @@
+import pygame
 from src.game.animation import AnimeSprite
 from src.util.type import Pos, Size
+from src.helper.font import get_font, render_text
 from pygame.sprite import AbstractGroup
+
+
+def text_button_frames(text) -> dict:
+    """ Create the IDLE / CHOSEN frames of a text menu button (both frames have the same size) """
+    font = get_font("MenuText")
+    glow = (60, 150, 255)
+    chosen_text = render_text(font, text, (255, 255, 255), spacing=6,
+                              glow_color=glow, glow_size=8)
+    idle_text = render_text(font, text, (120, 132, 170), spacing=6)
+
+    marker_space = 34
+    width = chosen_text.get_width() + marker_space * 2
+    height = chosen_text.get_height()
+    center = (width // 2, height // 2)
+
+    idle = pygame.Surface((width, height), pygame.SRCALPHA)
+    idle.blit(idle_text, idle_text.get_rect(center=center))
+
+    chosen = pygame.Surface((width, height), pygame.SRCALPHA)
+    chosen.blit(chosen_text, chosen_text.get_rect(center=center))
+    # Small arrow markers on both sides of the chosen button
+    left, right, y = 12, width - 12, center[1]
+    pygame.draw.polygon(chosen, glow, [(left, y - 6), (left + 9, y), (left, y + 6)])
+    pygame.draw.polygon(chosen, glow, [(right, y - 6), (right - 9, y), (right, y + 6)])
+
+    return {"IDLE": idle, "CHOSEN": chosen}
 
 
 class Button:

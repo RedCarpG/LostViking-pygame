@@ -52,6 +52,10 @@ def load_asset_ui():
     load_font("arialbd.ttf", 15, "HealthBar")
     load_font("arial.ttf", 15, "Equip")
     load_font("Raleway-Regular.ttf", 20, "Scoreboard")
+    load_font("Raleway-Regular.ttf", 15, "ScoreLabel")
+    load_font("arialbd.ttf", 30, "ScoreValue")
+    load_font("Raleway-Light.ttf", 72, "MenuTitle")
+    load_font("Raleway-Regular.ttf", 26, "MenuText")
 
     load_image("UI/Player/HealthBar.png")
     load_image("UI/Player/LifeLight.png")
@@ -73,9 +77,3 @@ def load_asset_ui():
     load_image("UI/Boss/MidTop.png")
     load_image("UI/Boss/MidTop_HealthBar.png")
 
-    load_image("UI/Pause/Exit0.png")
-    load_image("UI/Pause/Exit1.png")
-    load_image("UI/Pause/Restart0.png")
-    load_image("UI/Pause/Restart1.png")
-    load_image("UI/Pause/Resume0.png")
-    load_image("UI/Pause/Resume1.png")

@@ -1,5 +1,4 @@
 import math
-from unittest import result
 
 from pygame import Vector2
 
@@ -34,37 +33,20 @@ def cal_angle(base_point: Pos, target_point: Pos) -> int:
     return angle
 
 
+def angle_diff(current_angle, target_angle) -> float:
+    """ Shortest signed rotation (degrees, -180 to 180) from current_angle to target_angle """
+    return (target_angle - current_angle + 180) % 360 - 180
+
+
+def turn_toward(current_angle, target_angle, rotation_speed) -> float:
+    """ Rotate current_angle toward target_angle by at most rotation_speed degrees """
+    diff = angle_diff(current_angle, target_angle)
+    result = current_angle + max(-rotation_speed, min(rotation_speed, diff))
+    return (result + 180) % 360 - 180
+
+
 def follow_angle(base_point: Pos, target_point: Pos, current_angle, rotation_speed) -> int:
-
-    angle = cal_angle(base_point, target_point)
-
-    direction = 0
-    if current_angle > angle:
-        direction = -1
-    elif current_angle < angle:
-        direction = 1
-
-    diff = abs(current_angle - angle)
-    if diff > 180:
-        direction = - direction
-
-    result = current_angle + direction * rotation_speed
-    if result < -180:
-        result = 180
-    elif result > 180:
-        result = -180
-    return result
-
-    if base_point.x > target_point.x and current_angle > 90:
-        current_angle += rotation_speed
-    elif base_point.x < target_point.x and current_angle < -90:
-        current_angle -= rotation_speed
-    elif self.angle > angle:
-        self.angle -= 2
-    elif self.angle < angle:
-        self.angle += 2
-
-    if self.angle < -180:
-        self.angle = 180
-    if self.angle > 180:
-        self.angle = -180
+    """ Rotate current_angle to face target_point, by at most rotation_speed degrees
+    (the step is clamped so it does not overshoot and jitter around the target)
+    """
+    return turn_toward(current_angle, cal_angle(base_point, target_point), rotation_speed)

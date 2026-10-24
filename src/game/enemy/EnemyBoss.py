@@ -34,6 +34,12 @@ class EnemyBoss(EnemyI):
 
     DROP_SUPPLY_CHANCE = 0
 
+    SHAKE_DESTROY = 1.0
+
+    # Flying into the boss destroys the player, the boss only takes some damage
+    COLLIDE_SELF_DAMAGE = 500
+    KNOCKBACK = 0
+
     def __init__(self, frames, frame_size: Size, **kwargs):
         super().__init__(pos=Pos([0, 0]), frames=frames,
                          frame_size=frame_size, **kwargs)
@@ -94,7 +100,10 @@ class EnemyBoss(EnemyI):
     # -------------------- Behaviors --------------------
     def _move(self) -> None:
         super()._move()
-        if self.rect.left < 0 or self.rect.right > SCREEN_WIDTH:
-            # self.rect.left = 0
+        # Bounce on the screen edges (only when moving outwards, so it does not get stuck flipping)
+        if (self.rect.left < 0 and self._speed.x < 0) or (self.rect.right > SCREEN_WIDTH and self._speed.x > 0):
             self._move_x_direction = -self._move_x_direction
             self._speed.x = -self._speed.x
+
+    def collide_player(self) -> None:
+        self.hit(self.COLLIDE_SELF_DAMAGE)

@@ -20,6 +20,7 @@ class AnimeSprite(Sprite):
         self._anime_interval = 0
         self.enable_rotate = enable_rotate
         self.angle = angle
+        self._rendered_angle = angle
 
         if frame_size is not None:
             self._img_w = frame_size.width
@@ -51,16 +52,25 @@ class AnimeSprite(Sprite):
             self._anime_interval = 0
         else:
             self._anime_interval += 1
+            # Keep turning smooth between two animation frames
+            if self.enable_rotate and self.angle != self._rendered_angle:
+                self._render_frame()
 
-    def _next_image(self) -> None:
-        self._current_frame_index = (
-            self._current_frame_index + 1) % self._max_frame_index
+    def _render_frame(self) -> None:
+        """ Set self.image to the current frame, rotated if enabled """
+        # Read the sheet from self.frames each time: some UI code swaps it at runtime
         self.image = self.frames[self.current_state].subsurface(
             self._chop_rect.move(self._current_frame_index * self._img_w, 0))
         if self.enable_rotate:
             self.image = rotate(self.image, self.angle)
             _temp = self.rect.center
             self.rect = self.image.get_rect(center=_temp)
+        self._rendered_angle = self.angle
+
+    def _next_image(self) -> None:
+        self._current_frame_index = (
+            self._current_frame_index + 1) % self._max_frame_index
+        self._render_frame()
         if self._current_frame_index == 0:
             self.anime_end_loop_hook()
 
@@ -80,8 +90,4 @@ class AnimeSprite(Sprite):
         self._max_frame_width = self.current_frame.get_width()
         self._max_frame_index = int(self._max_frame_width / self._img_w)
 
-        self.image = self.current_frame.subsurface(self._chop_rect)
-        if self.enable_rotate:
-            self.image = rotate(self.image, self.angle)
-            _temp = self.rect.center
-            self.rect = self.image.get_rect(center=_temp)
+        self._render_frame()

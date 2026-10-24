@@ -2,7 +2,7 @@ from enum import Enum
 
 from src.util.type import Pos, Size
 from src.game.groups import G_Player1
-from src.util.inertial import decelerate
+from src.util.inertial import accelerate, decelerate
 from src.setting import SCREEN_HEIGHT
 from src.util.angle import follow_angle
 from .EnemyI import EnemyI
@@ -22,8 +22,11 @@ class EnemyII(EnemyI):
     MAX_SPEED_X = 10
     MAX_SPEED_Y = 1
     ACC_X = 0.2
+    ACC_LEAVE = 0.02
 
     DROP_SUPPLY_CHANCE = 0.5
+
+    SHAKE_DESTROY = 0.45
 
     def __init__(
             self,
@@ -93,9 +96,11 @@ class EnemyII(EnemyI):
     def enter_action_leave_phase(self):
         self.state = EnemyIIActionPhase.Leave
         self._speed.x = 0
-        self._speed.y = self.MAX_SPEED_Y
+        self._speed.y = 0
 
     def _action_leave(self):
+        # Ease into the leaving speed instead of starting at full speed
+        self._speed.y = accelerate(self._speed.y, self.MAX_SPEED_Y, 1, self.ACC_LEAVE)
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
 
