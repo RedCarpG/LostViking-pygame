@@ -12,10 +12,12 @@ The game uses a pixel-art style: hard edges, small palettes, no smooth gradients
 | Explosions | Drawn by the game at 2x (`src/game/animation/Explosion.py`) |
 | Carrier laser | Drawn by the game at 2x (`src/game/level/level1/CarrierLaser.py`) |
 | Planets | Random on every run, drawn by the game at 2x (`src/game/ui/Planets.py`) |
+| Red screen edges, WARNING banner | Drawn by the game at 2x (`src/game/animation/ScreenFX.py`) |
+| Muzzle flashes | Drawn by the game at 2x (`src/game/animation/MuzzleFlash.py`) |
 
 The effects drawn by the game share the helpers in `src/game/animation/pixel_fx.py`
-(ordered dither, value noise, nearest-neighbour 2x scaling). Explosions and the laser are
-drawn while the main menu shows (`src/game/animation/warmup.py`); planets are drawn a
+(ordered dither, value noise, nearest-neighbour 2x scaling). Explosions, the laser and the
+screen effects are drawn while the main menu shows (`src/game/animation/warmup.py`); planets are drawn a
 little each frame while the sky waits for the next one.
 
 ## Generate the images
