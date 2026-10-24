@@ -26,38 +26,40 @@ class UIEquip:
             bottom=SCREEN_HEIGHT-87, right=0)
 
         self.weapon_img = get_image("UI/Equip/Weapon0.png")
-        self.wepon_rect = pygame.Rect(16, 25, 42, 42)
+        self.wepon_rect = pygame.Rect(16, 24, 42, 42)
         self.bomb_img = get_image("UI/Equip/Bomb0.png")
-        self.bomb_rect = pygame.Rect(16, 78, 42, 42)
+        self.bomb_rect = pygame.Rect(16, 76, 42, 42)
         self._player_level = self.player_g.sprite.level
         self._player_bomb_count = self.player_g.sprite.bomb_count
         self.weapon_text = FontEntity(self.ui_equip, get_font("Equip"),
-                                      (f"{self._player_level}/5"), (self.wepon_rect.right-20, self.wepon_rect.bottom-15), color=COLOR.WHITE)
+                                      (f"{self._player_level}/5"), color=COLOR.WHITE)
+        self.weapon_text.rect.bottomright = (self.wepon_rect.right, self.wepon_rect.bottom + 2)
         self.bomb_text = FontEntity(self.ui_equip, get_font("Equip"),
-                                    (f"{self._player_bomb_count}/3"), (self.bomb_rect.right-20, self.bomb_rect.bottom-15), color=COLOR.WHITE)
+                                    (f"{self._player_bomb_count}/3"), color=COLOR.WHITE)
+        self.bomb_text.rect.bottomright = (self.bomb_rect.right, self.bomb_rect.bottom + 2)
 
         self.light1 = AnimeSprite(
             frames={
                 "IDLE": get_image("UI/Equip/Left_LightYellow.png")
             },
-            frame_size=Size([5, 10])
+            frame_size=Size([6, 10])
         )
-        self.light1.rect.move_ip(87, 82)
+        self.light1.rect.move_ip(84, 82)
         self.light1_effect = None
         self.light2 = AnimeSprite(
             frames={
                 "IDLE": get_image("UI/Equip/Left_LightYellow.png")
             },
-            frame_size=Size([5, 10])
+            frame_size=Size([6, 10])
         )
-        self.light2.rect.move_ip(87, 94)
+        self.light2.rect.move_ip(84, 94)
         self.light3 = AnimeSprite(
             frames={
                 "IDLE": get_image("UI/Equip/Left_LightRed.png")
             },
-            frame_size=Size([5, 10])
+            frame_size=Size([6, 10])
         )
-        self.light3.rect.move_ip(87, 106)
+        self.light3.rect.move_ip(84, 106)
 
         self.group_light = pygame.sprite.Group()
         self.group_light.add(self.light1)
@@ -115,7 +117,7 @@ class UIEquip:
                     frames={
                         "IDLE": get_image("UI/Equip/Left_LightGreen.png")
                     },
-                    frame_size=Size([5, 10]),
+                    frame_size=Size([6, 10]),
                     group=self.group_light,
                     offset=[self.light1.rect.x, self.light1.rect.y],
                     cb_func=cb_func
@@ -126,7 +128,7 @@ class UIEquip:
                 frames={
                     "IDLE": get_image("UI/Equip/Left_LightGreen.png")
                 },
-                frame_size=Size([5, 10]),
+                frame_size=Size([6, 10]),
                 group=self.group_light,
                 offset=[self.light2.rect.x, self.light2.rect.y]
             )
@@ -136,7 +138,7 @@ class UIEquip:
                 frames={
                     "IDLE": get_image("UI/Equip/Left_LightGreen.png")
                 },
-                frame_size=Size([5, 10]),
+                frame_size=Size([6, 10]),
                 group=self.group_light,
                 offset=[self.light3.rect.x, self.light3.rect.y]
             )

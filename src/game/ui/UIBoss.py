@@ -26,9 +26,9 @@ class UIBoss:
 
         # Health Bar
         self.health_bar_img = get_image("UI/Boss/MidTop_HealthBar.png")
-        self.health_bar_img_rect = self.health_bar_img.get_rect().move(31, 12)
+        self.health_bar_img_rect = self.health_bar_img.get_rect().move(32, 12)
         self.health_bar = HealthBar(
-            self.ui_boss, pygame.Rect(35, 15, 470, 20), 100)
+            self.ui_boss, pygame.Rect(36, 16, 470, 18), 100)
 
     def update(self):
         if self.state == UIState.Hidden and self.boss_g.sprite is not None:

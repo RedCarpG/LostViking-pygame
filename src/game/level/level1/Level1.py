@@ -4,7 +4,8 @@ import logging
 import sys
 from src.setting import MAIN_VOLUME
 from src.helper.sound.sound_loader import load_sound, play_music
-from src.helper.image import load_image, del_image
+from src.helper.image import load_image, get_image, del_image
+from src.game.animation.rotsprite import queue as queue_rotations
 from src.helper.sound import load_music
 from src.game.groups import G_BOSS, G_Enemys, G_Enemy_Bullets
 from .Scout import EnemyScout
@@ -52,6 +53,13 @@ class Level1:
         load_image("Enemy/Interceptor/InterceptorDestroy.png"),
         load_image("Enemy/Interceptor/InterceptorHit.png"),
         load_image("Enemy/Interceptor/InterceptorAttack.png")
+
+        # Pixel-art rotations of the enemies that turn, prepared before play so turning costs
+        # nothing in a round (the Phoenix "Fast" frames only fly at 90 degrees: no rotation needed)
+        for name in ["Normal", "Destroy", "Hit", "Attack"]:
+            queue_rotations(get_image(f"Enemy/Phoenix/Phoenix{name}.png"), 100)
+        for name in ["Idle", "Move", "Destroy", "Hit", "Attack"]:
+            queue_rotations(get_image(f"Enemy/Interceptor/Interceptor{name}.png"), 30)
 
         load_sound("Enemy/Shield.ogg", MAIN_VOLUME - 0.4, "SHIELD")
         load_sound("Enemy/Destroy.ogg", MAIN_VOLUME - 0.4, "ENEMY_DESTROY")

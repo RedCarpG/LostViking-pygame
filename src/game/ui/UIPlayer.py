@@ -13,6 +13,8 @@ from .HealthBar import HealthBar
 class UIPlayer:
 
     MOVE_SPEED = 3
+    # Distance between two life lights
+    LIFE_SPACING = 24
 
     def __init__(self, surface) -> None:
         self.surface = surface
@@ -28,24 +30,24 @@ class UIPlayer:
 
         # Health Bar
         self.health_bar_img = get_image("UI/Player/HealthBar.png")
-        self.health_bar_img_rect = self.health_bar_img.get_rect().move(12, 58)
+        self.health_bar_img_rect = self.health_bar_img.get_rect().move(10, 56)
         self.health_bar = HealthBar(
-            self.ui_player, pygame.Rect(15, 61, 215, 20), 100)
+            self.ui_player, pygame.Rect(14, 60, 214, 18), 100)
 
         # Life Light image
         self.lifelight_img = AnimeSprite(
             frames={
                 "IDLE": get_image("UI/Player/LifeLight.png")
             },
-            frame_size=Size([19, 6]))
-        self.lifelight_img.rect.move_ip(99, 23)
+            frame_size=Size([20, 6]))
+        self.lifelight_img.rect.move_ip(92, 22)
         self.lifelight_empty_img = get_image("UI/Player/LifeLightEmpty.png")
         self.lifelight_blink = UIEffect(
             self.ui_player,
             frames={
                 "IDLE": get_image("UI/Player/LifeLightBlink.png")
             },
-            frame_size=Size([19, 6]),
+            frame_size=Size([20, 6]),
             loop=True,
             offset=[self.lifelight_img.rect.x, self.lifelight_img.rect.y]
         )
@@ -53,7 +55,7 @@ class UIPlayer:
         # Player image
         self.player_img = get_image("UI/Player/Viking100.png")
         self.player_img_rect = self.player_img.get_rect()
-        self.player_img_rect.center = (36, 30)
+        self.player_img_rect.center = (36, 32)
         self.player_dmg = UIEffect(
             self.ui_player,
             frames={
@@ -91,10 +93,10 @@ class UIPlayer:
         for i in range(5):
             if i < self.player_g.sprite.life:
                 self.ui_player.blit(
-                    self.lifelight_img.image, self.lifelight_img.rect.move(i*23, 0))
+                    self.lifelight_img.image, self.lifelight_img.rect.move(i * self.LIFE_SPACING, 0))
             else:
                 self.ui_player.blit(
-                    self.lifelight_empty_img, self.lifelight_img.rect.move(i*23, 0))
+                    self.lifelight_empty_img, self.lifelight_img.rect.move(i * self.LIFE_SPACING, 0))
 
         if self.player_g.sprite.life <= 1:
             self.lifelight_blink.blit()

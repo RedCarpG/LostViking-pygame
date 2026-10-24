@@ -17,7 +17,7 @@ class UIPause:
         self.surface = surface
 
         self.pause_text = render_text(get_font("MenuTitle"), "PAUSED", COLOR.WHITE,
-                                      spacing=10, glow_color=(60, 150, 255), glow_size=10)
+                                      spacing=1, glow_color=(60, 150, 255))
         self.pause_rect = self.pause_text.get_rect(
             center=(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 150))
 

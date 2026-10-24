@@ -183,6 +183,10 @@ function show_infobox() {
 </script>
 
     <title>Lost Viking</title>
+    <!-- Lost Viking: Silkscreen pixel font for the loading screen (same font as the game) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap" rel="stylesheet">
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,15 +226,17 @@ function show_infobox() {
                 radial-gradient(ellipse at 74% 72%, rgba(25, 50, 125, 0.35), transparent 55%),
                 #05060f;
             color: #ffffff;
-            font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+            font-family: "Silkscreen", "Courier New", monospace;
             user-select: none;
         }
         #splash .title {
-            font-weight: 300;
-            font-size: clamp(36px, 9vw, 96px);
-            letter-spacing: 0.18em;
-            padding-left: 0.18em;
-            text-shadow: 0 0 18px rgba(60, 150, 255, 0.9), 0 0 42px rgba(60, 150, 255, 0.5);
+            font-weight: 700;
+            font-size: clamp(32px, 8vw, 80px);
+            letter-spacing: 0.1em;
+            padding-left: 0.1em;
+            /* Hard pixel outline and shadow, no blur (pixel-art style) */
+            text-shadow: 0.08em 0 0 #2a6fd0, -0.08em 0 0 #2a6fd0, 0 0.08em 0 #2a6fd0, 0 -0.08em 0 #2a6fd0,
+                         0.16em 0.16em 0 rgba(10, 20, 60, 0.9);
         }
         #splash .line {
             width: min(520px, 70vw);
@@ -304,6 +310,12 @@ function show_infobox() {
         canvas.emscripten:focus,
         canvas.emscripten:focus-visible {
             outline: none;
+        }
+
+        /* Lost Viking: keep pixels sharp when the browser scales the game to the window */
+        canvas.emscripten {
+            image-rendering: crisp-edges;
+            image-rendering: pixelated;
         }
 
         body {

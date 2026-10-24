@@ -9,9 +9,9 @@ def text_button_frames(text) -> dict:
     """ Create the IDLE / CHOSEN frames of a text menu button (both frames have the same size) """
     font = get_font("MenuText")
     glow = (60, 150, 255)
-    chosen_text = render_text(font, text, (255, 255, 255), spacing=6,
-                              glow_color=glow, glow_size=8)
-    idle_text = render_text(font, text, (120, 132, 170), spacing=6)
+    chosen_text = render_text(font, text, (255, 255, 255), spacing=0,
+                              glow_color=glow)
+    idle_text = render_text(font, text, (120, 132, 170), spacing=0)
 
     marker_space = 34
     width = chosen_text.get_width() + marker_space * 2

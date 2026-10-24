@@ -2,7 +2,7 @@ from src.setting import COLOR
 
 
 class FontEntity:
-    def __init__(self, screen, font, text='', position=(0, 0), antialias=True, color=COLOR.WHITE, background=None):
+    def __init__(self, screen, font, text='', position=(0, 0), antialias=False, color=COLOR.WHITE, background=None):
         self.font = font
         self.antialias = antialias
         self.color = color

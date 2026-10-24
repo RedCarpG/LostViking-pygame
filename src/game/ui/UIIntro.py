@@ -15,21 +15,22 @@ class UIIntro:
     HINT_COLOR = (130, 145, 185)
 
     def __init__(self, surface) -> None:
-        load_font("Raleway-Light.ttf", 104, "Title")
-        load_font("Raleway-Regular.ttf", 17, "IntroHint")
+        load_font("Silkscreen-Bold.ttf", 64, "Title")
+        load_font("Silkscreen-Regular.ttf", 16, "IntroHint")
         self.surface = surface
 
         self.title = render_text(get_font("Title"), "LOST VIKING", COLOR.WHITE,
-                                 spacing=10, glow_color=self.TITLE_GLOW, glow_size=12)
+                                 spacing=1, glow_color=self.TITLE_GLOW)
         self.title_rect = self.title.get_rect(
             center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.3))
 
         # Thin line under the title, fading out on both sides
         line_width = 560
         self.line = pygame.Surface((line_width, 2), pygame.SRCALPHA)
-        for x in range(line_width):
-            alpha = int(200 * math.sin(math.pi * x / line_width))
-            self.line.fill((*self.TITLE_GLOW, alpha), (x, 0, 1, 2))
+        # Brighter in the middle, in hard steps (pixel style)
+        for x in range(0, line_width, 8):
+            alpha = (60, 130, 220)[min(2, int(3 * math.sin(math.pi * x / line_width)))]
+            self.line.fill((*self.TITLE_GLOW, alpha), (x, 0, 8, 2))
         self.line_rect = self.line.get_rect(
             center=(SCREEN_WIDTH / 2, self.title_rect.bottom - 8))
 
@@ -46,7 +47,7 @@ class UIIntro:
         self.hint_text = render_text(
             get_font("IntroHint"),
             "WASD  MOVE      SPACE  SHOOT      Q  BOMB      ESC  PAUSE",
-            self.HINT_COLOR, spacing=2)
+            self.HINT_COLOR, spacing=0)
         self.hint_rect = self.hint_text.get_rect(
             center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.76))
 

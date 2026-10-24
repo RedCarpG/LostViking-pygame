@@ -38,7 +38,7 @@ class UISettings:
         font = get_font("MenuText")
 
         self.title = render_text(get_font("MenuTitle"), "SETTINGS", COLOR.WHITE,
-                                 spacing=10, glow_color=self.GLOW, glow_size=10)
+                                 spacing=1, glow_color=self.GLOW)
         self.title_rect = self.title.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2 - 230))
 
         # Labels pre-rendered in both states: (idle, chosen)
@@ -49,11 +49,11 @@ class UISettings:
                 self.labels.append((frames["IDLE"], frames["CHOSEN"]))
             else:
                 self.labels.append((
-                    render_text(font, label, self.IDLE_COLOR, spacing=6),
-                    render_text(font, label, COLOR.WHITE, spacing=6, glow_color=self.GLOW, glow_size=8)))
+                    render_text(font, label, self.IDLE_COLOR, spacing=0),
+                    render_text(font, label, COLOR.WHITE, spacing=0, glow_color=self.GLOW)))
         self.on_off = {
             (value, chosen): render_text(font, "ON" if value else "OFF",
-                                         COLOR.WHITE if chosen else self.IDLE_COLOR, spacing=6)
+                                         COLOR.WHITE if chosen else self.IDLE_COLOR, spacing=0)
             for value in [True, False] for chosen in [True, False]}
 
         self.chosen = 0

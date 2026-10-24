@@ -1,7 +1,7 @@
 from pygame import Rect
 from pygame.sprite import Sprite, AbstractGroup
 from src.util.type import Size
-from pygame.transform import rotate
+from .rotsprite import rotated_frame, direction
 
 
 class AnimeSprite(Sprite):
@@ -52,19 +52,22 @@ class AnimeSprite(Sprite):
             self._anime_interval = 0
         else:
             self._anime_interval += 1
-            # Keep turning smooth between two animation frames
-            if self.enable_rotate and self.angle != self._rendered_angle:
+            # Turn between two animation frames when the angle reaches another direction
+            if self.enable_rotate and direction(self.angle) != direction(self._rendered_angle):
                 self._render_frame()
 
     def _render_frame(self) -> None:
         """ Set self.image to the current frame, rotated if enabled """
         # Read the sheet from self.frames each time: some UI code swaps it at runtime
-        self.image = self.frames[self.current_state].subsurface(
-            self._chop_rect.move(self._current_frame_index * self._img_w, 0))
+        sheet = self.frames[self.current_state]
+        rect = self._chop_rect.move(self._current_frame_index * self._img_w, 0)
         if self.enable_rotate:
-            self.image = rotate(self.image, self.angle)
+            # Pixel-art rotation (RotSprite), snapped to 32 directions and cached
+            self.image = rotated_frame(sheet, rect, self.angle)
             _temp = self.rect.center
             self.rect = self.image.get_rect(center=_temp)
+        else:
+            self.image = sheet.subsurface(rect)
         self._rendered_angle = self.angle
 
     def _next_image(self) -> None:

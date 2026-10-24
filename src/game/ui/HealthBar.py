@@ -21,8 +21,9 @@ class HealthBar:
         self._health_diff = 0
 
         self.health_text = FontEntity(surface, get_font("HealthBar"),
-                                      (f"{max_value}/{max_value}"), (rect.center[0], rect.center[1]-8), color=COLOR.WHITE)
-        self.health_text.rect.move_ip(-self.health_text.rect.width/2, 0)
+                                      (f"{max_value}/{max_value}"), color=COLOR.WHITE)
+        # Centered in the bar (the text stays centered when it changes)
+        self.health_text.move_center(rect.center)
 
     def update(self, health):
 

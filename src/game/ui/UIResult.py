@@ -15,13 +15,13 @@ class UIResult:
     GAME_OVER_GLOW = (255, 40, 40)
 
     def __init__(self, surface) -> None:
-        load_font("arialbd.ttf", 48, "ResultScore")
+        load_font("Silkscreen-Bold.ttf", 48, "ResultScore")
         self.surface = surface
 
         self.title = ""
         self.title_text = None
         self.score_label = render_text(get_font("ScoreLabel"), "SCORE",
-                                       self.LABEL_COLOR, spacing=4)
+                                       self.LABEL_COLOR, spacing=0)
         self.score_text = None
         self.best_text = None
 
@@ -44,15 +44,15 @@ class UIResult:
             self.title = "GAME OVER"
             glow_color = self.GAME_OVER_GLOW
         self.title_text = render_text(get_font("MenuTitle"), self.title, COLOR.WHITE,
-                                      spacing=8, glow_color=glow_color, glow_size=12)
+                                      spacing=1, glow_color=glow_color)
         self.score_text = render_text(get_font("ResultScore"), f"{score:,}",
-                                      COLOR.WHITE, spacing=2)
+                                      COLOR.WHITE, spacing=0)
         if score > 0 and score >= best_score:
             self.best_text = render_text(get_font("MenuText"), "NEW BEST!",
-                                         self.VICTORY_GLOW, spacing=4)
+                                         self.VICTORY_GLOW, spacing=0)
         else:
             self.best_text = render_text(get_font("MenuText"), f"BEST  {best_score:,}",
-                                         self.LABEL_COLOR, spacing=4)
+                                         self.LABEL_COLOR, spacing=0)
         self.menu.reset()
 
     def blit(self):

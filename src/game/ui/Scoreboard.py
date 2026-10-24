@@ -15,7 +15,7 @@ class Scoreboard:
         self.player_g = G_Player1
 
         self.label = render_text(get_font("ScoreLabel"), "SCORE",
-                                 self.LABEL_COLOR, spacing=4, shadow=True)
+                                 self.LABEL_COLOR, spacing=0, shadow=True)
         self._score = None
         self.value = None
         self.update()
@@ -25,7 +25,7 @@ class Scoreboard:
         if score != self._score:
             self._score = score
             self.value = render_text(get_font("ScoreValue"), f"{score:,}",
-                                     self.VALUE_COLOR, spacing=2, shadow=True)
+                                     self.VALUE_COLOR, spacing=0, shadow=True)
 
     def blit(self):
         self.surface.blit(self.label, self.POS)

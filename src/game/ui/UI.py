@@ -49,13 +49,15 @@ def load_asset_ui():
     from src.helper.image import load_image
     from src.helper.font import load_font
 
-    load_font("arialbd.ttf", 15, "HealthBar")
-    load_font("arial.ttf", 15, "Equip")
-    load_font("Raleway-Regular.ttf", 20, "Scoreboard")
-    load_font("Raleway-Regular.ttf", 15, "ScoreLabel")
-    load_font("arialbd.ttf", 30, "ScoreValue")
-    load_font("Raleway-Light.ttf", 72, "MenuTitle")
-    load_font("Raleway-Regular.ttf", 26, "MenuText")
+    # Silkscreen pixel font (SIL Open Font License, see Silkscreen-OFL.txt).
+    # Sizes are multiples of 8 so every font pixel is a whole number of screen pixels
+    load_font("Silkscreen-Regular.ttf", 16, "HealthBar")
+    load_font("Silkscreen-Regular.ttf", 16, "Equip")
+    load_font("Silkscreen-Regular.ttf", 16, "Scoreboard")
+    load_font("Silkscreen-Regular.ttf", 16, "ScoreLabel")
+    load_font("Silkscreen-Bold.ttf", 32, "ScoreValue")
+    load_font("Silkscreen-Bold.ttf", 32, "MenuTitle")
+    load_font("Silkscreen-Regular.ttf", 24, "MenuText")
 
     load_image("UI/Player/HealthBar.png")
     load_image("UI/Player/LifeLight.png")

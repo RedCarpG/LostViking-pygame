@@ -252,9 +252,9 @@ class PhoenixShieldBubble(AnimeSprite):
 
         scale = 1 + self.POP_SCALE * self._pop
         if scale > 1.005:
-            # Swell on the hit and spring back
-            frame = pygame.transform.smoothscale(
-                frame, (int(frame.get_width() * scale), int(frame.get_height() * scale)))
+            # Swell on the hit and spring back (pixel scaling, sizes kept even)
+            frame = pygame.transform.scale(
+                frame, (int(frame.get_width() * scale) // 2 * 2, int(frame.get_height() * scale) // 2 * 2))
 
         frame.set_alpha(alpha)
         self.image = frame
@@ -278,9 +278,10 @@ class ShieldImpactEffect(Sprite):
     def __init__(self, phoenix, hit_pos=None) -> None:
         super().__init__(G_Effects)
         if ShieldImpactEffect._GLOW is None:
+            # Glow in three hard steps (pixel style, no smooth gradient)
             glow = pygame.Surface((76, 76), pygame.SRCALPHA)
-            for i in range(38):
-                pygame.draw.circle(glow, (*self.COLOR, int(255 * (i / 38) ** 1.6)), (38, 38), 38 - i)
+            for radius, alpha in ((38, 60), (26, 130), (14, 230)):
+                pygame.draw.circle(glow, (*self.COLOR, alpha), (38, 38), radius)
             ShieldImpactEffect._GLOW = glow
 
         center = Vector2(phoenix.rect.center)

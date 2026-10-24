@@ -29,9 +29,9 @@ class TestPanel:
     OFF_COLOR = (120, 132, 170)
 
     def __init__(self, surface, game) -> None:
-        load_font("Raleway-Regular.ttf", 15, "Panel")
-        load_font("arialbd.ttf", 12, "PanelKey")
-        load_font("Raleway-Regular.ttf", 13, "PanelHint")
+        load_font("Silkscreen-Regular.ttf", 16, "Panel")
+        load_font("Silkscreen-Bold.ttf", 8, "PanelKey")
+        load_font("Silkscreen-Regular.ttf", 8, "PanelHint")
         self.surface = surface
         self.game = game
         self.visible = True
@@ -128,7 +128,7 @@ class TestPanel:
     def _text(self, font_name, text, color):
         key = (font_name, text, color)
         if key not in self._text_cache:
-            self._text_cache[key] = get_font(font_name).render(text, True, color)
+            self._text_cache[key] = get_font(font_name).render(text, False, color)
         return self._text_cache[key]
 
     TITLE_HEIGHT = 30
