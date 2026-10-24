@@ -4,10 +4,10 @@ RotSprite: scale the sprite up 4x with Scale2x (which keeps pixel-art edges), ro
 then scale back down. Lines and outlines stay clean, unlike a plain rotation.
 It is slow, so only the angles of the first quarter are computed (once per frame
 of a sheet); the other directions are exact 90 degree turns of them. The work is
-queued while loading and done a little each frame on the main menu.
+queued while loading and done a little each frame on the main menu (see warmup).
 """
-import time
 import pygame
+from . import warmup
 
 DIRECTIONS = 32
 STEP = 360 / DIRECTIONS
@@ -17,7 +17,6 @@ _QUARTER = DIRECTIONS // 4
 UPSCALE_PASSES = 2
 
 _cache = {}
-_jobs = []
 
 
 def direction(angle) -> int:
@@ -48,27 +47,8 @@ def rotated_frame(sheet, rect, angle) -> pygame.Surface:
 
 
 def queue(sheet, frame_width) -> None:
-    """ Plan the rotations of every frame of a horizontal sheet (done later by work / finish) """
+    """ Plan the rotations of every frame of a horizontal sheet (done later, see warmup) """
     for x in range(0, sheet.get_width() - frame_width + 1, frame_width):
         rect = pygame.Rect(x, 0, frame_width, sheet.get_height())
         for step in range(1, _QUARTER):
-            _jobs.append((sheet, rect, step))
-
-
-def work(budget_ms) -> None:
-    """ Compute queued rotations for at most about `budget_ms` milliseconds """
-    end = time.perf_counter() + budget_ms / 1000
-    while _jobs and time.perf_counter() < end:
-        sheet, rect, step = _jobs.pop()
-        rotated_frame(sheet, rect, step * STEP)
-
-
-def finish() -> None:
-    """ Compute every queued rotation now """
-    while _jobs:
-        sheet, rect, step = _jobs.pop()
-        rotated_frame(sheet, rect, step * STEP)
-
-
-def pending() -> int:
-    return len(_jobs)
+            warmup.add(lambda rect=rect, step=step: rotated_frame(sheet, rect, step * STEP))

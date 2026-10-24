@@ -15,7 +15,8 @@ from src.game.player import *
 from src.game.ui import *
 from src.game.supply import *
 from src.game.level import *
-from src.game.animation import ScreenShake, rotsprite
+from src.game.animation import ScreenShake, warmup
+from src.game.animation.Explosion import prepare as prepare_explosions
 from src.game.GameSettings import GameSettings
 from src.game.TestMode import TestMode
 from src.util.type import Pos
@@ -44,8 +45,8 @@ class Game:
     MAX_UPDATES = 4
     # Delay that is caught up over the next frames, a longer freeze is skipped
     MAX_LAG_MS = 250
-    # Time per menu frame spent preparing the pixel-art enemy rotations
-    ROTATION_WORK_MS = 6
+    # Time per menu frame spent preparing rotations and generated effects (see warmup)
+    WARMUP_WORK_MS = 6
 
     # Test mode hitboxes: (group, color, collision ratio used against player bullets / enemy bullets)
     HITBOXES = [
@@ -75,6 +76,9 @@ class Game:
 
         # Supply
         load_asset_supply()
+
+        # Explosions, drawn while the menu is shown (see warmup)
+        prepare_explosions()
 
         # UI
         load_asset_ui()
@@ -187,8 +191,8 @@ class Game:
 
         G_Players.update()
         self.background.update()
-        # Prepare the pixel-art enemy rotations while the menu is shown
-        rotsprite.work(self.ROTATION_WORK_MS)
+        # Prepare the pixel-art rotations and generated effects while the menu is shown
+        warmup.work(self.WARMUP_WORK_MS)
 
     def _step_playing(self, events):
         self.player.detect_key_pressed()
@@ -261,7 +265,7 @@ class Game:
 
         if self._settings_return_state == GameState.INTRO:
             self.background.update()
-            rotsprite.work(self.ROTATION_WORK_MS)
+            warmup.work(self.WARMUP_WORK_MS)
 
     def _step_result(self, events):
         for event in events:
@@ -397,8 +401,8 @@ class Game:
 
     def start_round(self, test_mode: bool):
         """ Start a round from the main menu """
-        # Rotations not prepared yet on the menu are done now, not during play
-        rotsprite.finish()
+        # Images not prepared yet on the menu are made now, not during play
+        warmup.finish()
         TestMode.reset()
         TestMode.enabled = test_mode
         # Test mode starts with a safe, empty stage: spawn what you want from the panel

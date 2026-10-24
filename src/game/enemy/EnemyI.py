@@ -7,7 +7,7 @@ import pygame
 from pygame import Vector2
 from src.game.animation import AttachEffect
 
-from src.game.animation import AnimeSprite, ScreenShake
+from src.game.animation import AnimeSprite, ScreenShake, Explosion
 from src.game.groups import G_Enemys
 from src.util.type import Pos, Size
 from src.helper.sound import play_sound
@@ -42,6 +42,12 @@ class EnemyI(AnimeSprite, BasicEnemy):
     FLASH_DURATION = 3
     KNOCKBACK = 2
 
+    # Explosion when destroyed (see Explosion.SIZES)
+    EXPLOSION = "medium"
+    # Frames of the destroy animation shown under the explosion (the last ones are
+    # dark silhouettes)
+    DESTROY_FRAMES_SHOWN = 3
+
     def __init__(self, pos: Pos, frames, frame_size: Size = None, *groups, **kwargs):
         BasicEnemy.__init__(self)
         AnimeSprite.__init__(self, frames, frame_size,
@@ -71,6 +77,9 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self._move()
         if self.is_active:
             self.action(*args, **kwargs)
+        elif self.current_state == "DESTROY" and self._current_frame_index >= self.DESTROY_FRAMES_SHOWN:
+            self.kill()
+            return
         self._update_flash()
 
     def anime_end_loop_hook(self):
@@ -148,6 +157,7 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self.is_active = False
         self._speed *= 0.5
         self.set_anime_state("DESTROY")
+        Explosion(self.rect.center, self.EXPLOSION)
         ScreenShake.add(self.SHAKE_DESTROY)
         from src.game.supply import drop_supply_event
         if drop_supply and random.random() < self.drop_supply_chance:

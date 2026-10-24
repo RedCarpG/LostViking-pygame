@@ -3,7 +3,9 @@ Includes:
     -> PlayerPlane
 """
 from enum import Flag
+import random
 import pygame
+from pygame import Vector2
 from pygame.sprite import spritecollideany
 from pygame.locals import *
 
@@ -16,7 +18,7 @@ from src.util.inertial import accelerate, decelerate
 from src.helper.sound import play_sound
 
 from src.game.groups import G_Enemys, G_Enemy_Bullets, G_Players
-from src.game.animation import AnimeSprite, ScreenShake
+from src.game.animation import AnimeSprite, ScreenShake, Explosion
 from src.game.animation.Effect import AttachEffect
 from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB
 from .player_control import PLAYER1_CONTROL, PLAYER2_CONTROL
@@ -52,6 +54,11 @@ class PlayerPlane(AnimeSprite):
     # Screen shake trauma (see ScreenShake)
     SHAKE_HIT = 0.5
     SHAKE_DESTROY = 0.8
+    # Chance of a second upgrade orb when more than one upgrade is lost on death
+    EXTRA_DROP_CHANCE = 0.5
+    # Frames of the destroy animation shown under the explosion (then the plane is
+    # hidden until it comes back)
+    DESTROY_FRAMES_SHOWN = 2
     # Hits with less damage shake less, and continuous damage (e.g. a laser)
     # only shakes again after a short cooldown
     SHAKE_FULL_DAMAGE = 30
@@ -106,6 +113,8 @@ class PlayerPlane(AnimeSprite):
     def update(self) -> None:
         """ Update method from Sprite, is called per frame """
         super().update()
+        if not self.is_active and self.current_state == "DESTROY"                 and self._current_frame_index >= self.DESTROY_FRAMES_SHOWN:
+            self.image = self._hidden_image()
         self._reload()
         if self._count_shake_cooldown > 0:
             self._count_shake_cooldown -= 1
@@ -166,6 +175,30 @@ class PlayerPlane(AnimeSprite):
         self.set_anime_state("DESTROY")
         play_sound("PLAYER_DESTROY")
         ScreenShake.add(self.SHAKE_DESTROY)
+        Explosion(self.rect.center, "large")
+        self._drop_upgrades()
+
+    def _hidden_image(self) -> pygame.Surface:
+        if getattr(self, "_hidden", None) is None or self._hidden.get_size() != self.rect.size:
+            self._hidden = pygame.Surface(self.rect.size, pygame.SRCALPHA)
+        return self._hidden
+
+    def _drop_upgrades(self):
+        """ The lost weapon upgrades: one upgrade orb pops out of the wreck,
+        a second one (by chance) when more than one upgrade was lost
+        """
+        # Imported here: the supplies import this module
+        from src.game.supply import SupplyLevel
+        lost = self.level - 1
+        drops = 0
+        if lost >= 1:
+            drops = 1
+        if lost >= 2 and random.random() < self.EXTRA_DROP_CHANCE:
+            drops = 2
+        angles = [0] if drops == 1 else [-35, 35]
+        for angle in angles[:drops]:
+            supply = SupplyLevel(Pos(self.rect.center))
+            supply.pop(Vector2(0, -1).rotate(angle + random.uniform(-15, 15)), speed=5)
 
     # ------------------ Battle
     def hit(self, damage=100, **kwargs) -> bool:

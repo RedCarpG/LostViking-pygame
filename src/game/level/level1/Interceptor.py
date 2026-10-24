@@ -26,6 +26,7 @@ class EnemyInterceptor(EnemyIII):
     COLLIDE_DAMAGE = 35
 
     HITBOX = (20, 20)
+    EXPLOSION = "small"
 
     MOVE_RAD = 300
 

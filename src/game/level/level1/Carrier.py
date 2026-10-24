@@ -1,7 +1,6 @@
 import random
 import pygame
 from pygame import Vector2
-from src.game.animation.AnimeSprite import AnimeSprite
 from src.game.enemy import EnemyBoss, EnemyBullet
 from src.game.animation import AttachEffect, Effect
 from src.helper.image import get_image, get_scaled_image
@@ -9,23 +8,18 @@ from src.helper.sound import play_sound
 from src.util.type import Pos, Size
 from src.util.inertial import accelerate, decelerate
 from .Interceptor import EnemyInterceptor
-from src.game.groups import G_Enemy_Bullets, G_Player1
+from . import CarrierLaser
+from .CarrierLaser import LaserCarrier
+from src.game.groups import G_Player1
 
 
 def _sheet(name):
     return get_scaled_image(f"Enemy/Carrier/{name}.png", EnemyCarrier.SCALE)
 
 
-def _laser_sheet(name):
-    return get_scaled_image(f"Enemy/Carrier/{name}.png", EnemyCarrier.SCALE, EnemyCarrier.LASER_ART_HEIGHT)
-
-
 class EnemyCarrier(EnemyBoss):
     # Drawn at 2x (an integer scale keeps the pixel art sharp)
     SCALE = 2
-    # Rows of the laser art kept (the rest would be below the screen)
-    LASER_ART_HEIGHT = 380
-    LASER_ART_WIDTH = 133
 
     # The top half of the ship stays above the screen
     STOP_TOP = -150
@@ -78,12 +72,7 @@ class EnemyCarrier(EnemyBoss):
         """ Scale the boss images now (while loading) instead of when it arrives """
         for name in ("CarrierBase", "CarrierNormal", "CarrierDestroy", "CarrierHit", "CarrierAttack"):
             _sheet(name)
-        for name in ("LaserCarrierStart", "LaserCarrierIdle", "LaserCarrierEnd"):
-            _laser_sheet(name)
-
-    @classmethod
-    def laser_frame_size(cls) -> Size:
-        return Size([cls.LASER_ART_WIDTH * cls.SCALE, cls.LASER_ART_HEIGHT * cls.SCALE])
+        CarrierLaser.prepare()
 
     @property
     def enraged(self) -> bool:
@@ -114,7 +103,10 @@ class EnemyCarrier(EnemyBoss):
                 self._fire_ring()
 
     def _action_stay(self):
-        if self.laser_active():
+        if self.laser_active() and not self.laser.firing:
+            # Hold still while the laser charges: the aiming line shows where it will hit
+            self._speed.x = decelerate(self._speed.x, self.ACC_X)
+        elif self.laser_active():
             # Sweep the laser slowly toward the player
             target_x = G_Player1.sprite.rect.centerx
             if abs(target_x - self.rect.centerx) < 8:
@@ -151,14 +143,19 @@ class EnemyCarrier(EnemyBoss):
         getattr(self, f"_attack_{name}")()
 
     def destroy(self) -> None:
+        if not self.is_active:
+            return
         for each in EnemyInterceptor.GROUP:
             each.destroy(False)
         if self.laser_active():
             self.laser.kill()
         self._volley_left = 0
         self._count_second_ring = 0
-        play_sound("CARRIER_DESTROY")
         return super().destroy()
+
+    def final_blast(self):
+        play_sound("CARRIER_DESTROY")
+        super().final_blast()
 
     # --------------- Attacks --------------- #
     def _wind_up(self, callback):
@@ -191,21 +188,8 @@ class EnemyCarrier(EnemyBoss):
         self._wind_up(launch)
 
     def _attack_laser(self):
-        play_sound("CARRIER_LASER_START")
-        size = self.laser_frame_size()
-
-        def _attack_laser():
-            self.laser = LaserCarrier(self)
-        AttachEffect(
-            self,
-            frames={
-                "IDLE": _laser_sheet("LaserCarrierStart")
-            },
-            frame_size=size,
-            enable_rotate=False,
-            cb_func=_attack_laser,
-            offset=[0, (size.height + self.rect.height) / 2]
-        )
+        # Charges, then fires (see CarrierLaser)
+        self.laser = LaserCarrier(self)
 
     def _attack_fan(self):
         def fire():
@@ -300,62 +284,3 @@ class BulletCarrierBolt(EnemyBullet):
         )
         return super().hit()
 
-
-class LaserCarrier(AnimeSprite):
-    DURATION = 200
-    HIT_EFFECT_INTERVAL = 4
-    DAMAGE = 8
-    # Width of the bright core of the beam in the art (before scaling): the hitbox
-    BEAM_WIDTH = 32
-
-    def __init__(self, carrier) -> None:
-        play_sound("CARRIER_LASER")
-        super().__init__(
-            frames={
-                "IDLE": _laser_sheet("LaserCarrierIdle")
-            },
-            frame_size=EnemyCarrier.laser_frame_size())
-        self.add(G_Enemy_Bullets)
-        self.carrier = carrier
-        self.damage = self.DAMAGE
-        self.duration = self.DURATION
-        self._count_hit_effect = 0
-        self.rect.midtop = self.carrier.rect.midbottom
-
-    @property
-    def hitbox(self):
-        """ The beam core, from the ship's nose to the bottom (see collide_detect) """
-        box = pygame.Rect(0, 0, self.BEAM_WIDTH * EnemyCarrier.SCALE, self.rect.height)
-        box.midtop = self.rect.midtop
-        return box
-
-    def update(self):
-        super().update()
-        # General update method for bullets
-        self.rect.midtop = self.carrier.rect.midbottom
-        if self.duration > 0:
-            self.duration -= 1
-        else:
-            size = EnemyCarrier.laser_frame_size()
-            AttachEffect(
-                self.carrier,
-                frames={
-                    "IDLE": _laser_sheet("LaserCarrierEnd")
-                },
-                frame_size=size,
-                enable_rotate=False,
-                offset=[0, (size.height + self.carrier.rect.height) / 2]
-            )
-            self.kill()
-
-    def hit(self, target=None):
-        # The laser touches every frame: a spark every few frames is enough
-        self._count_hit_effect = (self._count_hit_effect + 1) % self.HIT_EFFECT_INTERVAL
-        if target is not None and self._count_hit_effect == 1:
-            Effect(
-                Pos(target.rect.midtop).random_offset(15),
-                frames={
-                    "IDLE": get_image("Enemy/LaserHit.png"),
-                },
-                frame_size=Size([19, 19])
-            )

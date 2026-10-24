@@ -1,5 +1,6 @@
 from enum import Enum
 import abc
+import math
 import random
 
 import pygame
@@ -10,23 +11,41 @@ from src.game.animation import AnimeSprite
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.game.groups import G_Supplies, G_Players
 from src.util.type import Pos, Size
-from src.util.inertial import accelerate, decelerate
 from src.game.player import PlayerPlane
+
 
 class SupplyStatus(Enum):
     Enter = 0
-    Stay = 1
+    Pop = 1
     Move = 2
     Leave = 3
 
 
 class Supply(AnimeSprite, abc.ABC):
-    STAY_PHASE_DURATION = 20
-    MOVE_PHASE_DURATION = 1500
-    SPEED_CHANGE_DURATION = 300
+    """ A supply floats on smooth curves: it steers toward a target point that changes
+    from time to time (inside the play area), then glides down and leaves the screen
+    """
 
-    MAX_SPEED = 2
-    ACC = 0.01
+    MOVE_PHASE_DURATION = 1500
+    # Frames before choosing another target point, when it was not reached
+    TARGET_DURATION = 240
+
+    MAX_SPEED = 1.6
+    ENTER_SPEED = 2.5
+    LEAVE_SPEED = 2.2
+    # Steering: at most TURN_RATE degrees and ACC pixels/frame of speed change per frame,
+    # so every turn is a wide arc (even a U-turn)
+    TURN_RATE = 2.0
+    ACC = 0.03
+    # Slow down after popping out of a destroyed ship
+    POP_DRAG = 0.93
+
+    # Area where the target points are chosen
+    AREA = pygame.Rect(70, 130, SCREEN_WIDTH - 140, int(SCREEN_HEIGHT * 0.62) - 130)
+
+    # Gentle up and down bobbing (pixels, frames per cycle)
+    BOB_HEIGHT = 3
+    BOB_PERIOD = 90
 
     SCORE = 1000
 
@@ -38,29 +57,31 @@ class Supply(AnimeSprite, abc.ABC):
         self.supply_type = None
         self.add(G_Supplies)
 
-        self._direction = Vector2(
-            random.choice([1, -1]),
-            random.choice([1, -1])
-        )
-        self._speed = Vector2(0, 0)
-
-        self.status = SupplyStatus.Stay
-        self._count_status_duration = self.STAY_PHASE_DURATION
-        self._count_speed_change_duration = self.SPEED_CHANGE_DURATION
+        self._pos = Vector2(0, 0)
+        self._velocity = Vector2(0, 0)
+        self._target = Vector2(self.AREA.center)
+        self._count_target = 0
+        self._count_status_duration = self.MOVE_PHASE_DURATION
+        self._time = random.uniform(0, self.BOB_PERIOD)
 
         self.set_pos(pos)
+        if pos is None:
+            self.enter_action_enter_phase()
+        else:
+            self.enter_action_move_phase()
 
     def update(self):
         self.anime()
         if self.is_active:
             if self.status == SupplyStatus.Enter:
                 self._action_enter()
-            elif self.status == SupplyStatus.Stay:
-                self._action_stay()
+            elif self.status == SupplyStatus.Pop:
+                self._action_pop()
             elif self.status == SupplyStatus.Move:
                 self._action_move()
             else:
                 self._action_leave()
+            self._move()
             self.collide_player(G_Players)
         else:
             self.kill()
@@ -69,93 +90,96 @@ class Supply(AnimeSprite, abc.ABC):
     def get_by_player(self, player: PlayerPlane):
         self.kill()
 
+    # --------------- Phases --------------- #
     def enter_action_enter_phase(self):
+        """ Come in from the top of the screen """
         self.status = SupplyStatus.Enter
-        self._speed.y = self.MAX_SPEED
-        self._speed.x = 0
+        self._velocity = Vector2(0, self.ENTER_SPEED)
 
-    def enter_action_stay_phase(self):
-        self.status = SupplyStatus.Stay
-        self._count_status_duration = self.STAY_PHASE_DURATION
+    def pop(self, direction: Vector2, speed=4.0):
+        """ Burst out (from a destroyed ship), slow down, then float around """
+        self.status = SupplyStatus.Pop
+        self._velocity = Vector2(direction).normalize() * speed if direction.length() > 0 else Vector2(0, -speed)
 
     def enter_action_move_phase(self):
         self.status = SupplyStatus.Move
-        self._count_speed_change_duration = self.SPEED_CHANGE_DURATION
         self._count_status_duration = self.MOVE_PHASE_DURATION
-        self._direction.x = random.choice([1, -1])
-        self._direction.y = random.choice([1, -1])
+        self._new_target()
 
     def enter_action_leave_phase(self):
         self.status = SupplyStatus.Leave
-        self._speed.y = self.MAX_SPEED
 
     def set_pos(self, point: Pos):
         if point is None:
-            self.rect.left, self.rect.top = [random.randint(
-                0, SCREEN_WIDTH - self.rect.width), - self.rect.height]
+            x = random.randint(self.rect.width, SCREEN_WIDTH - self.rect.width)
+            self._pos = Vector2(x, -self.rect.height)
         else:
-            self.rect.center = point.to_list()
+            self._pos = Vector2(point.to_list())
+        self.rect.center = (round(self._pos.x), round(self._pos.y))
+
+    def _new_target(self):
+        self._target = Vector2(random.uniform(self.AREA.left, self.AREA.right),
+                               random.uniform(self.AREA.top, self.AREA.bottom))
+        self._count_target = self.TARGET_DURATION
+
+    def _steer(self, wanted: Vector2):
+        """ Turn the velocity smoothly toward `wanted` """
+        speed = self._velocity.length()
+        wanted_speed = wanted.length()
+        if speed < 0.05:
+            # Standing still: start moving toward `wanted`
+            if wanted_speed > 0:
+                self._velocity = wanted.normalize() * min(wanted_speed, self.ACC)
+            return
+        if wanted_speed > 0:
+            angle = (self._velocity.angle_to(wanted) + 180) % 360 - 180
+            self._velocity.rotate_ip(max(-self.TURN_RATE, min(self.TURN_RATE, angle)))
+        speed += max(-self.ACC, min(self.ACC, wanted_speed - speed))
+        self._velocity.scale_to_length(max(0.0, speed))
 
     def _action_enter(self):
-        self._move()
-        if self.rect.bottom > SCREEN_HEIGHT / 3:
-            self._speed.y = decelerate(self._speed.y, self.ACC)
-            if self._speed.y <= 0:
-                self.enter_action_stay_phase()
+        if self._pos.y > self.AREA.top:
+            self.enter_action_move_phase()
 
-    def _action_stay(self):
-        if self._count_status_duration:
-            self._count_status_duration -= 1
-        else:
+    def _action_pop(self):
+        self._velocity *= self.POP_DRAG
+        if self._velocity.length() < self.MAX_SPEED * 0.5:
             self.enter_action_move_phase()
 
     def _action_move(self):
-        self._move()
+        to_target = self._target - self._pos
+        self._count_target -= 1
+        if to_target.length() < 40 or self._count_target <= 0:
+            self._new_target()
+            to_target = self._target - self._pos
+        # Slow down a little near the target point
+        speed = self.MAX_SPEED * min(1.0, 0.4 + to_target.length() / 200)
+        self._steer(to_target.normalize() * speed if to_target.length() > 0 else Vector2(0, 0))
 
-        if self._count_speed_change_duration:
-            self._speed.x = accelerate(
-                self._speed.x, self.MAX_SPEED, self._direction.x, self.ACC)
-            self._speed.y = accelerate(
-                self._speed.y, self.MAX_SPEED, self._direction.y, self.ACC)
-            self._count_speed_change_duration -= 1
-        else:
-            self._speed.x = decelerate(self._speed.x, self.ACC)
-            self._speed.y = decelerate(self._speed.y, self.ACC)
-
-            if self._speed.y == 0 and self._speed.x == 0:
-                self._count_speed_change_duration = self.SPEED_CHANGE_DURATION
-                self._direction.x = random.choice([1, -1])
-                self._direction.y = random.choice([1, -1])
-
-        if self.rect.bottom > SCREEN_HEIGHT * 2 / 3 and self._speed.y > 0:
-            self._speed.y = -self._speed.y
-            self._direction.y = -self._direction.y
-
-        if self._count_status_duration:
-            self._count_status_duration -= 1
-        else:
+        self._count_status_duration -= 1
+        if self._count_status_duration <= 0:
             self.enter_action_leave_phase()
 
     def _action_leave(self):
-        if self.rect.top < SCREEN_HEIGHT:
-            self._move()
-        else:
+        self._steer(Vector2(0, self.LEAVE_SPEED))
+        if self.rect.top > SCREEN_HEIGHT:
             self.kill()
 
     def _move(self):
-        if self.rect.left <= 0 and self._speed.x < 0:
-            self._speed.x = -self._speed.x
-            self._direction.x = -self._direction.x
-        elif self.rect.right >= SCREEN_WIDTH and self._speed.x > 0:
-            self._speed.x = -self._speed.x
-            self._direction.x = -self._direction.x
-        if self.rect.top <= 0 and self._speed.y < 0:
-            self._speed.y = -self._speed.y
-            self._direction.y = -self._direction.y
-        self.rect.move_ip(self._speed.x, self._speed.y)
+        self._pos += self._velocity
+        # Keep it on screen (a drop near an edge must not get lost)
+        if self.status != SupplyStatus.Leave:
+            half_w, half_h = self.rect.width / 2, self.rect.height / 2
+            self._pos.x = max(half_w, min(SCREEN_WIDTH - half_w, self._pos.x))
+            if self.status != SupplyStatus.Enter:
+                self._pos.y = max(half_h, min(SCREEN_HEIGHT - half_h, self._pos.y))
+        self._time += 1
+        bob = self.BOB_HEIGHT * math.sin(self._time * math.tau / self.BOB_PERIOD)
+        self.rect.center = (round(self._pos.x), round(self._pos.y + bob))
 
     def collide_player(self, player_group):
         player = spritecollideany(self, player_group)
-        if player:
+        # A destroyed plane (still exploding) can't pick up its own dropped upgrades
+        if player and player.is_active:
             player.add_score(self.SCORE)
             self.get_by_player(player)

@@ -3,6 +3,7 @@ import random
 import pygame
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.helper.image import load_image
+from .Planets import PlanetLayer
 
 
 def _make_glow(radius, color, max_alpha) -> pygame.Surface:
@@ -39,8 +40,9 @@ def _smooth_base() -> pygame.Surface:
 
 
 class Background:
-    """ Scrolling pixel-art space background: a nebula layer and two star layers
-    moving at different speeds (parallax). Everything sits on a 2x2 pixel grid.
+    """ Scrolling pixel-art space background: a nebula layer, two star layers moving at
+    different speeds (parallax) and now and then a random planet between the star layers.
+    Everything sits on a 2x2 pixel grid.
     """
 
     # Size in screen pixels of one background art pixel
@@ -77,6 +79,9 @@ class Background:
                 ])
             self._layers.append((stars, size, speed, steps))
 
+        # Random planets (different on every run)
+        self.planets = PlanetLayer()
+
     def _create_base(self) -> pygame.Surface:
         """ The slowest layer: the pixel-art nebula (made by tools/pixel_art/make_nebula.py)
         drawn at 2x, with dim dust stars. It tiles vertically so it can scroll forever.
@@ -93,6 +98,7 @@ class Background:
     def update(self) -> None:
         self._time += 1
         self._base_y = (self._base_y + self.BASE_SPEED) % SCREEN_HEIGHT
+        self.planets.update()
         for stars, size, speed, steps in self._layers:
             for star in stars:
                 star[1] += speed
@@ -107,7 +113,10 @@ class Background:
         surface.blit(self._base, (0, y - SCREEN_HEIGHT))
 
         grid = self.PIXEL
-        for stars, size, speed, steps in self._layers:
+        for index, (stars, size, speed, steps) in enumerate(self._layers):
+            if index == 1:
+                # The planet hides the far stars, the near stars pass in front of it
+                self.planets.draw(surface)
             for x, y, step, phase in stars:
                 # Twinkle between a few hard brightness steps
                 level = (step + int(1.5 + 1.5 * math.sin(self._time * 0.05 + phase))) % len(steps)

@@ -9,6 +9,14 @@ The game uses a pixel-art style: hard edges, small palettes, no smooth gradients
 | Background nebula (`src/asset/image/Nebula.png`) | `make_nebula.py`, 500x500, drawn at 2x by the game |
 | Text | Silkscreen pixel font (`src/asset/font`, SIL Open Font License), sizes in multiples of 8 |
 | Turning enemies | RotSprite rotation in 32 directions (`src/game/animation/rotsprite.py`) |
+| Explosions | Drawn by the game at 2x (`src/game/animation/Explosion.py`) |
+| Carrier laser | Drawn by the game at 2x (`src/game/level/level1/CarrierLaser.py`) |
+| Planets | Random on every run, drawn by the game at 2x (`src/game/ui/Planets.py`) |
+
+The effects drawn by the game share the helpers in `src/game/animation/pixel_fx.py`
+(ordered dither, value noise, nearest-neighbour 2x scaling). Explosions and the laser are
+drawn while the main menu shows (`src/game/animation/warmup.py`); planets are drawn a
+little each frame while the sky waits for the next one.
 
 ## Generate the images
 

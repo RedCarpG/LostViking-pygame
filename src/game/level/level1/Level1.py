@@ -44,9 +44,6 @@ class Level1:
         load_image("Enemy/Carrier/CarrierDestroy.png"),
         load_image("Enemy/Carrier/CarrierHit.png"),
         load_image("Enemy/Carrier/CarrierAttack.png")
-        load_image("Enemy/Carrier/LaserCarrierStart.png")
-        load_image("Enemy/Carrier/LaserCarrierIdle.png")
-        load_image("Enemy/Carrier/LaserCarrierEnd.png")
         load_image("Enemy/Carrier/OrbCyan.png")
         load_image("Enemy/Carrier/OrbPink.png")
         # The boss is drawn at 2x: scale its images now, not when it arrives

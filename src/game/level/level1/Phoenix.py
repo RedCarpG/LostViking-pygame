@@ -28,6 +28,7 @@ class EnemyPhoenix(EnemyII):
 
     # Body and wing roots, the same at every angle
     HITBOX = (60, 60)
+    EXPLOSION = "large"
 
     def __init__(self, pos, is_left):
         super().__init__(
