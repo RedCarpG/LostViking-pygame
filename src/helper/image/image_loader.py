@@ -129,3 +129,20 @@ def get_image(label: str, **kwargs: ImageType) -> pygame.surface.Surface:
 
 def del_image(label: str):
     _IMAGE.pop(label, None)
+
+
+_SCALED = {}
+
+
+def get_scaled_image(label: str, factor: int, height: int = None) -> pygame.surface.Surface:
+    """ get_image scaled by an integer `factor` with sharp pixels (pixel art), cached.
+    :param height: keep only the top `height` rows of the image before scaling
+    """
+    key = (label, factor, height)
+    if key not in _SCALED:
+        image = _IMAGE[label]
+        if height is not None and height < image.get_height():
+            image = image.subsurface((0, 0, image.get_width(), height))
+        _SCALED[key] = pygame.transform.scale(
+            image, (image.get_width() * factor, image.get_height() * factor))
+    return _SCALED[key]

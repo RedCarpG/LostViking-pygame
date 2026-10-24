@@ -24,6 +24,8 @@ class EnemyBullet(pygame.sprite.Sprite, ABC):
 
         self.image = image
         self.rect = self.image.get_rect(center=pos.to_list())
+        # Exact position: slow or diagonal bullets would stall with whole pixels only
+        self._pos = Vector2(self.rect.center)
         self.speed = speed
         self.damage = damage
 
@@ -39,4 +41,5 @@ class EnemyBullet(pygame.sprite.Sprite, ABC):
         self.kill()
 
     def _move(self):
-        self.rect.move_ip(self.speed.x, self.speed.y)
+        self._pos += self.speed
+        self.rect.center = (round(self._pos.x), round(self._pos.y))

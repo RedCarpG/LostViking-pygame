@@ -32,6 +32,9 @@ class EnemyBoss(EnemyI):
     IDLE_DURATION = 200
     MOVE_X_DURATION = 200
 
+    # Height of the top edge where the boss stops after coming in (can be above the screen)
+    STOP_TOP = 0
+
     DROP_SUPPLY_CHANCE = 0
 
     SHAKE_DESTROY = 1.0
@@ -68,7 +71,9 @@ class EnemyBoss(EnemyI):
         self.state = BossActionPhase.MoveDown
 
     def _action_move_down(self):
-        if self.rect.top > 0:
+        # Start braking just in time to stop at STOP_TOP
+        braking_distance = self._speed.y ** 2 / (2 * self.ACC_Y)
+        if self.STOP_TOP - self.rect.top <= braking_distance:
             self._speed.y = decelerate(self._speed.y, self.ACC_Y)
             if self._speed.y == 0:
                 self.enter_action_stay_phase()

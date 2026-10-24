@@ -1,50 +1,171 @@
+import random
+import pygame
+from pygame import Vector2
 from src.game.animation.AnimeSprite import AnimeSprite
-from src.game.enemy import EnemyBoss
+from src.game.enemy import EnemyBoss, EnemyBullet
 from src.game.animation import AttachEffect, Effect
-from src.helper.image import get_image
+from src.helper.image import get_image, get_scaled_image
 from src.helper.sound import play_sound
 from src.util.type import Pos, Size
+from src.util.inertial import accelerate, decelerate
 from .Interceptor import EnemyInterceptor
-from src.game.groups import G_Enemy_Bullets
+from src.game.groups import G_Enemy_Bullets, G_Player1
+
+
+def _sheet(name):
+    return get_scaled_image(f"Enemy/Carrier/{name}.png", EnemyCarrier.SCALE)
+
+
+def _laser_sheet(name):
+    return get_scaled_image(f"Enemy/Carrier/{name}.png", EnemyCarrier.SCALE, EnemyCarrier.LASER_ART_HEIGHT)
 
 
 class EnemyCarrier(EnemyBoss):
+    # Drawn at 2x (an integer scale keeps the pixel art sharp)
+    SCALE = 2
+    # Rows of the laser art kept (the rest would be below the screen)
+    LASER_ART_HEIGHT = 380
+    LASER_ART_WIDTH = 133
+
+    # The top half of the ship stays above the screen
+    STOP_TOP = -150
+
     MAX_INTERCEPTOR_NUMBER = 9
 
-    ATTACK_SPEED = 700
+    # Frames between two attacks, faster below half health
+    ATTACK_SPEED = 200
+    ENRAGED_ATTACK_SPEED = 130
+    FIRST_ATTACK_DELAY = 60
+
+    # (attack, weight); the same attack is never used twice in a row
+    ATTACKS = [("interceptors", 3), ("laser", 2), ("fan", 3), ("ring", 2), ("volley", 3)]
+
+    FAN_BULLETS = 7
+    FAN_SPREAD = 14         # degrees between two bullets
+    FAN_SPEED = 5
+    RING_BULLETS = 20
+    RING_SPEED = 3.5
+    SECOND_RING_DELAY = 24  # enraged: a second ring
+    VOLLEY_BURSTS = 3
+    VOLLEY_INTERVAL = 12
+    VOLLEY_SPREAD = 8
+    VOLLEY_SPEED = 9
+    LASER_SWEEP_SPEED = 1.2
 
     def __init__(self):
         EnemyBoss.__init__(
             self,
             frames={
-                "BASE": get_image("Enemy/Carrier/CarrierBase.png"),
-                "IDLE": get_image("Enemy/Carrier/CarrierNormal.png"),
-                "DESTROY": get_image("Enemy/Carrier/CarrierDestroy.png"),
-                "HIT": get_image("Enemy/Carrier/CarrierHit.png"),
-                "ATTACK_INTERCEPTOR": get_image("Enemy/Carrier/CarrierAttack.png")
+                "BASE": _sheet("CarrierBase"),
+                "IDLE": _sheet("CarrierNormal"),
+                "DESTROY": _sheet("CarrierDestroy"),
+                "HIT": _sheet("CarrierHit"),
+                "ATTACK_INTERCEPTOR": _sheet("CarrierAttack")
             },
             frame_size=None
         )
         play_sound("CARRIER_ARRIVE")
-        self._count_attack_interval = 100
+        self._count_attack_interval = self.FIRST_ATTACK_DELAY
+        self._last_attack = None
+        self._ring_offset = 0
+        self._count_second_ring = 0
+        self._volley_left = 0
+        self._count_volley = 0
+        self.laser = None
+
+    @classmethod
+    def prepare_images(cls):
+        """ Scale the boss images now (while loading) instead of when it arrives """
+        for name in ("CarrierBase", "CarrierNormal", "CarrierDestroy", "CarrierHit", "CarrierAttack"):
+            _sheet(name)
+        for name in ("LaserCarrierStart", "LaserCarrierIdle", "LaserCarrierEnd"):
+            _laser_sheet(name)
+
+    @classmethod
+    def laser_frame_size(cls) -> Size:
+        return Size([cls.LASER_ART_WIDTH * cls.SCALE, cls.LASER_ART_HEIGHT * cls.SCALE])
+
+    @property
+    def enraged(self) -> bool:
+        return self._health < self.MAX_HEALTH / 2
+
+    @property
+    def emitter(self) -> Vector2:
+        """ Where bullets come out: the nose of the ship """
+        return Vector2(self.rect.centerx, self.rect.bottom - 40)
+
+    def laser_active(self) -> bool:
+        return self.laser is not None and self.laser.alive()
 
     # --------------- Override Methods --------------- #
-    def shoot(self, target):
+    def action(self):
+        super().action()
+        # Bullet patterns that last a few frames
+        if self._volley_left > 0:
+            if self._count_volley > 0:
+                self._count_volley -= 1
+            else:
+                self._fire_volley()
+                self._volley_left -= 1
+                self._count_volley = self.VOLLEY_INTERVAL
+        if self._count_second_ring > 0:
+            self._count_second_ring -= 1
+            if self._count_second_ring == 0:
+                self._fire_ring()
 
-        num_interceptor = len(EnemyInterceptor.GROUP.sprites())
-        if num_interceptor > self.MAX_INTERCEPTOR_NUMBER / 2:
-            self._shoot_laser()
-
+    def _action_stay(self):
+        if self.laser_active():
+            # Sweep the laser slowly toward the player
+            target_x = G_Player1.sprite.rect.centerx
+            if abs(target_x - self.rect.centerx) < 8:
+                self._speed.x = decelerate(self._speed.x, self.ACC_X)
+            else:
+                self._move_x_direction = 1 if target_x > self.rect.centerx else -1
+                self._speed.x = accelerate(self._speed.x, self.LASER_SWEEP_SPEED,
+                                           self._move_x_direction, self.ACC_X)
         else:
-            self._shoot_interceptor()
+            super()._action_stay()
 
-    def _shoot_interceptor(self):
-        def _attack_cb():
-            if self.is_active and len(EnemyInterceptor.GROUP.sprites()) < self.MAX_INTERCEPTOR_NUMBER:
-                pos = self.rect.center
-                EnemyInterceptor(Pos(pos),  [[pos[0], pos[1] + 300]])
-                # Launch the next one after another attack animation, until the limit is reached
-                self._shoot_interceptor()
+    def attack(self, target):
+        if self._count_attack_interval > 0:
+            self._count_attack_interval -= 1
+        else:
+            self.shoot(target)
+            self._count_attack_interval = self.ENRAGED_ATTACK_SPEED if self.enraged else self.ATTACK_SPEED
+
+    def shoot(self, target):
+        """ Pick the next attack """
+        choices = []
+        for name, weight in self.ATTACKS:
+            if name == self._last_attack:
+                continue
+            if name == "interceptors" and len(EnemyInterceptor.GROUP) >= self.MAX_INTERCEPTOR_NUMBER // 2:
+                continue
+            if name == "laser" and self.laser_active():
+                continue
+            choices.append((name, weight))
+        if not choices:
+            choices = [("fan", 1)]
+        name = random.choices([c[0] for c in choices], weights=[c[1] for c in choices])[0]
+        self._last_attack = name
+        getattr(self, f"_attack_{name}")()
+
+    def destroy(self) -> None:
+        for each in EnemyInterceptor.GROUP:
+            each.destroy(False)
+        if self.laser_active():
+            self.laser.kill()
+        self._volley_left = 0
+        self._count_second_ring = 0
+        play_sound("CARRIER_DESTROY")
+        return super().destroy()
+
+    # --------------- Attacks --------------- #
+    def _wind_up(self, callback):
+        """ Play the attack animation (a warning), then call `callback` """
+        def fire():
+            if self.is_active:
+                callback()
         AttachEffect(
             self,
             frames={
@@ -52,61 +173,161 @@ class EnemyCarrier(EnemyBoss):
             },
             frame_size=None,
             enable_rotate=False,
-            cb_func=_attack_cb
+            cb_func=fire
         )
 
-    def _shoot_laser(self):
+    def _aim(self, origin) -> Vector2:
+        """ Unit vector from `origin` toward the player """
+        direction = Vector2(G_Player1.sprite.rect.center) - origin
+        return direction.normalize() if direction.length() > 0 else Vector2(0, 1)
+
+    def _attack_interceptors(self):
+        def launch():
+            if len(EnemyInterceptor.GROUP.sprites()) < self.MAX_INTERCEPTOR_NUMBER:
+                pos = self.rect.center
+                EnemyInterceptor(Pos(pos), [[pos[0], pos[1] + 300]])
+                # Launch the next one after another attack animation, until the limit is reached
+                self._wind_up(launch)
+        self._wind_up(launch)
+
+    def _attack_laser(self):
         play_sound("CARRIER_LASER_START")
+        size = self.laser_frame_size()
 
         def _attack_laser():
-            LaserCarrier(self)
+            self.laser = LaserCarrier(self)
         AttachEffect(
             self,
             frames={
-                "IDLE": get_image("Enemy/Carrier/LaserCarrierStart.png")
+                "IDLE": _laser_sheet("LaserCarrierStart")
             },
-            frame_size=Size([133, 696]),
+            frame_size=size,
             enable_rotate=False,
             cb_func=_attack_laser,
-            offset=[0, (696 + self.rect.height)/2]
+            offset=[0, (size.height + self.rect.height) / 2]
         )
 
-    def destroy(self) -> None:
-        for each in EnemyInterceptor.GROUP:
-            each.destroy(False)
-        play_sound("CARRIER_DESTROY")
-        return super().destroy()
+    def _attack_fan(self):
+        def fire():
+            origin = self.emitter
+            aim = self._aim(origin)
+            for i in range(self.FAN_BULLETS):
+                angle = (i - (self.FAN_BULLETS - 1) / 2) * self.FAN_SPREAD
+                BulletCarrierOrb(origin, aim.rotate(angle) * self.FAN_SPEED, "Cyan")
+            play_sound("PHOENIX_LASER")
+        self._wind_up(fire)
 
-    def attack(self, target):
-        if self._count_attack_interval > 0:
-            self._count_attack_interval -= 1
-        else:
-            self.shoot(target)
-            self._count_attack_interval = self.ATTACK_SPEED
+    def _attack_ring(self):
+        def fire():
+            self._fire_ring()
+            if self.enraged:
+                self._count_second_ring = self.SECOND_RING_DELAY
+        self._wind_up(fire)
+
+    def _fire_ring(self):
+        origin = self.emitter
+        step = 360 / self.RING_BULLETS
+        for i in range(self.RING_BULLETS):
+            BulletCarrierOrb(origin, Vector2(0, 1).rotate(self._ring_offset + i * step) * self.RING_SPEED, "Pink")
+        # Turn the next ring by half a step
+        self._ring_offset += step / 2
+        play_sound("PHOENIX_LASER")
+
+    def _attack_volley(self):
+        def fire():
+            self._volley_left = self.VOLLEY_BURSTS
+            self._count_volley = 0
+        self._wind_up(fire)
+
+    def _fire_volley(self):
+        origin = self.emitter
+        aim = self._aim(origin)
+        for angle in (-self.VOLLEY_SPREAD, 0, self.VOLLEY_SPREAD):
+            BulletCarrierBolt(origin, aim.rotate(angle) * self.VOLLEY_SPEED)
+        play_sound("INTERCEPTOR_LASER")
 
     @classmethod
     def add_enemy_carrier(cls):
         EnemyCarrier()
 
 
+class BulletCarrierOrb(EnemyBullet):
+    """ Energy orb of the fan and ring attacks """
+
+    DAMAGE = 25
+
+    def __init__(self, pos: Vector2, velocity: Vector2, color: str):
+        super().__init__(
+            Pos([pos.x, pos.y]),
+            speed=velocity,
+            damage=self.DAMAGE,
+            image=get_image(f"Enemy/Carrier/Orb{color}.png")
+        )
+
+    def hit(self, target=None):
+        Effect(
+            Pos(self.rect.center).random_offset(4),
+            frames={
+                "IDLE": get_image("Enemy/LaserHit.png"),
+            },
+            frame_size=Size([19, 19])
+        )
+        return super().hit()
+
+
+class BulletCarrierBolt(EnemyBullet):
+    """ Fast aimed bolt of the volley attack """
+
+    DAMAGE = 30
+
+    def __init__(self, pos: Vector2, velocity: Vector2):
+        # The art points down: turn it to the direction it flies
+        angle = -Vector2(0, 1).angle_to(velocity)
+        super().__init__(
+            Pos([pos.x, pos.y]),
+            speed=velocity,
+            damage=self.DAMAGE,
+            image=pygame.transform.rotate(get_image("Enemy/Laser2.png"), angle)
+        )
+
+    def hit(self, target=None):
+        Effect(
+            Pos(self.rect.center).random_offset(4),
+            frames={
+                "IDLE": get_image("Enemy/LaserHit.png"),
+            },
+            frame_size=Size([19, 19])
+        )
+        return super().hit()
+
+
 class LaserCarrier(AnimeSprite):
     DURATION = 200
     HIT_EFFECT_INTERVAL = 4
-    DAMAGE = 15
+    DAMAGE = 8
+    # Width of the bright core of the beam in the art (before scaling): the hitbox
+    BEAM_WIDTH = 32
 
     def __init__(self, carrier) -> None:
         play_sound("CARRIER_LASER")
         super().__init__(
             frames={
-                "IDLE": get_image("Enemy/Carrier/LaserCarrierIdle.png")
+                "IDLE": _laser_sheet("LaserCarrierIdle")
             },
-            frame_size=Size([133, 696]))
+            frame_size=EnemyCarrier.laser_frame_size())
         self.add(G_Enemy_Bullets)
         self.carrier = carrier
         self.damage = self.DAMAGE
         self.duration = self.DURATION
         self._count_hit_effect = 0
         self.rect.midtop = self.carrier.rect.midbottom
+
+    @property
+    def hitbox(self):
+        """ The beam core, from the ship's nose to the bottom (see collide_detect) """
+        box = pygame.Rect(0, 0, self.BEAM_WIDTH * EnemyCarrier.SCALE, self.rect.height)
+        box.midtop = self.rect.midtop
+        return box
 
     def update(self):
         super().update()
@@ -115,14 +336,15 @@ class LaserCarrier(AnimeSprite):
         if self.duration > 0:
             self.duration -= 1
         else:
+            size = EnemyCarrier.laser_frame_size()
             AttachEffect(
                 self.carrier,
                 frames={
-                    "IDLE": get_image("Enemy/Carrier/LaserCarrierEnd.png")
+                    "IDLE": _laser_sheet("LaserCarrierEnd")
                 },
-                frame_size=Size([133, 696]),
+                frame_size=size,
                 enable_rotate=False,
-                offset=[0, (696 + self.carrier.rect.height)/2]
+                offset=[0, (size.height + self.carrier.rect.height) / 2]
             )
             self.kill()
 
