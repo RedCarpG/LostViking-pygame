@@ -20,6 +20,10 @@ supply_cooldown_count = supply_cooldown_timer.tick()
 
 SUPPLY_COOLDOWN = 10000
 
+# Frames between two random supplies (35s at 60 FPS)
+ADD_SUPPLY_INTERVAL = 35 * 60
+_count_add_supply = 0
+
 
 class SupplyEvent:
 
@@ -28,7 +32,19 @@ class SupplyEvent:
 
 
 def supply_event_config():
-    pygame.time.set_timer(EVENT_ADD_SUPPLY, 35000)
+    global _count_add_supply
+    _count_add_supply = 0
+
+
+def update_supply_timer():
+    """ Called every frame while playing, posts EVENT_ADD_SUPPLY periodically
+    (pygame.time.set_timer is not available on WASM)
+    """
+    global _count_add_supply
+    _count_add_supply += 1
+    if _count_add_supply >= ADD_SUPPLY_INTERVAL:
+        _count_add_supply = 0
+        pygame.event.post(pygame.event.Event(EVENT_ADD_SUPPLY))
 
 
 def supply_events_handler(event):

@@ -35,14 +35,8 @@ def _handle_player_bomb_explode_event(player: PlayerPlane):
     pygame.event.set_allowed(EVENT_PLAYER_BOMB)
 
 
-def stop_player_shoot():
-    """ Cancel the auto shoot timer started when the shoot key is held """
-    pygame.time.set_timer(EVENT_PLAYER_SHOOT, 0)
-
-
 def reset_player_events():
     """ Reset the player event states, called when a round restarts """
-    stop_player_shoot()
     PlayerNucBomb._IS_LAUNCHED = False
     pygame.event.set_allowed(EVENT_PLAYER_BOMB)
 

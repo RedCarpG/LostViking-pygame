@@ -53,29 +53,29 @@ class Level1:
         load_image("Enemy/Interceptor/InterceptorHit.png"),
         load_image("Enemy/Interceptor/InterceptorAttack.png")
 
-        load_sound("Enemy/Shield.wav", MAIN_VOLUME - 0.4, "SHIELD")
-        load_sound("Enemy/Destroy.wav", MAIN_VOLUME - 0.4, "ENEMY_DESTROY")
-        load_sound("Enemy/PhoenixArrive.wav",
+        load_sound("Enemy/Shield.ogg", MAIN_VOLUME - 0.4, "SHIELD")
+        load_sound("Enemy/Destroy.ogg", MAIN_VOLUME - 0.4, "ENEMY_DESTROY")
+        load_sound("Enemy/PhoenixArrive.ogg",
                    MAIN_VOLUME - 0.4, "PHOENIX_ARRIVE")
-        load_sound("Enemy/PhoenixLaser.wav",
+        load_sound("Enemy/PhoenixLaser.ogg",
                    MAIN_VOLUME - 0.3, "PHOENIX_LASER")
-        load_sound("Enemy/PhoenixDestroy.wav",
+        load_sound("Enemy/PhoenixDestroy.ogg",
                    MAIN_VOLUME - 0.3, "PHOENIX_DESTROY")
-        load_sound("Enemy/ScoutDestroy.wav",
+        load_sound("Enemy/ScoutDestroy.ogg",
                    MAIN_VOLUME - 0.4, "SCOUT_DESTROY")
-        load_sound("Enemy/CarrierDestroy.wav",
+        load_sound("Enemy/CarrierDestroy.ogg",
                    MAIN_VOLUME - 0.1, "CARRIER_DESTROY")
-        load_sound("Enemy/CarrierLaserStart.wav",
+        load_sound("Enemy/CarrierLaserStart.ogg",
                    MAIN_VOLUME - 0.4, "CARRIER_LASER_START")
-        load_sound("Enemy/CarrierLaser.wav",
+        load_sound("Enemy/CarrierLaser.ogg",
                    MAIN_VOLUME - 0.3, "CARRIER_LASER")
-        load_sound("Enemy/CarrierArrive.wav",
+        load_sound("Enemy/CarrierArrive.ogg",
                    MAIN_VOLUME - 0.2, "CARRIER_ARRIVE")
-        load_sound("Enemy/InterceptorLaser.wav",
+        load_sound("Enemy/InterceptorLaser.ogg",
                    MAIN_VOLUME - 0.4, "INTERCEPTOR_LASER")
-        load_sound("Enemy/InterceptorCreate.wav",
+        load_sound("Enemy/InterceptorCreate.ogg",
                    MAIN_VOLUME - 0.4, "INTERCEPTOR_CREATE")
-        load_sound("Enemy/Hit.wav",
+        load_sound("Enemy/Hit.ogg",
                    MAIN_VOLUME - 0.4, "ENEMY_HIT")
 
         self.spwan_speed_scout = self.SPAWN_SPEED_SCOUT

@@ -1,5 +1,4 @@
 
-from re import T
 from pygame import Rect
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH
 

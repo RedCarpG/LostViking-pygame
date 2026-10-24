@@ -1,8 +1,9 @@
+import asyncio
 import pygame
 from src.game.Game import Game
 
 
-def main():
+async def main():
 
     pygame.init()
     pygame.mixer.init()
@@ -10,7 +11,7 @@ def main():
     pygame.display.set_caption("Lost Viking")
 
     game = Game()
-    game.run()
+    await game.run()
 
     pygame.font.quit()
     pygame.mixer.quit()
@@ -18,7 +19,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
 
     import sys
     sys.exit()

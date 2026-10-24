@@ -3,7 +3,7 @@ from pygame.locals import *
 from src.helper.image import get_image
 from src.helper.font import load_font, get_font, FontEntity
 from src.util.type import Pos
-from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR
+from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_RESTART
 from .Button import Button
 
@@ -47,7 +47,10 @@ class UIResult:
             center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 200])
         )
 
-        self.buttons = [self.button_restart, self.button_exit]
+        self.buttons = [self.button_restart]
+        # A browser page can not be closed by the game
+        if not IS_WEB:
+            self.buttons.append(self.button_exit)
         self.button_choosed = 0
 
     def show(self, is_victory: bool, score: int, best_score: int):

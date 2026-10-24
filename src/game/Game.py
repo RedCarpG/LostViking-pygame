@@ -1,3 +1,4 @@
+import asyncio
 from enum import Enum
 from pygame.locals import *
 import pygame
@@ -70,10 +71,12 @@ class Game:
 
     # ------------------ Main loop ------------------
 
-    def run(self):
+    async def run(self):
         while self.running:
             self.step()
             self.clock.tick(60)
+            # Give control back to the browser each frame (required by pygbag)
+            await asyncio.sleep(0)
 
     def step(self):
         """ Run one frame of the current state """
@@ -120,6 +123,10 @@ class Game:
                 self.ui.toggle_hidden()
             elif event.type == KEYUP and event.key == K_ESCAPE:
                 self.pause()
+            # --------------- Window Events ---------------
+            # Pause when the window (or the browser tab) goes to the background
+            elif event.type in [WINDOWFOCUSLOST, WINDOWHIDDEN, WINDOWMINIMIZED]:
+                self.pause()
             else:
                 supply_events_handler(event)
 
@@ -134,6 +141,7 @@ class Game:
         self.fps_counter.update()
         self.ui.update()
         self.level.update()
+        update_supply_timer()
 
         self._check_round_end()
         self._draw_world()
@@ -145,7 +153,7 @@ class Game:
             elif self.ui_pause.handle_event(event):
                 pass
             elif event.type == EVENT_RESUME:
-                self.state = GameState.PLAYING
+                self.resume()
             elif event.type == EVENT_RESTART:
                 self.restart()
                 break
@@ -208,8 +216,7 @@ class Game:
             best_score=self.best_score)
 
     def _stop_player_input(self):
-        """ Release every held control so the player does not keep moving or shooting """
-        stop_player_shoot()
+        """ Release every held control so the player does not keep moving """
         self.player.trigger_stop_x()
         self.player.trigger_stop_y()
 
@@ -221,10 +228,22 @@ class Game:
     def pause(self):
         self.state = GameState.PAUSED
         self._stop_player_input()
+        # Pause the music and every sound effect channel
+        pygame.mixer.music.pause()
+        pygame.mixer.pause()
+
+    def resume(self):
+        self.state = GameState.PLAYING
+        pygame.mixer.music.unpause()
+        pygame.mixer.unpause()
 
     def restart(self):
         self._stop_player_input()
         reset_player_events()
+        # Restart may come from the pause menu, where the mixer is paused
+        pygame.mixer.unpause()
+        pygame.mixer.stop()
+        supply_event_config()
 
         # Kill every sprite so it also leaves the per-class groups (e.g. EnemyScout.GROUP)
         for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Enemys,
@@ -241,3 +260,4 @@ class Game:
         self._end_state = None
         self.state = GameState.PLAYING
         self.level.start()
+        pygame.mixer.music.unpause()

@@ -463,15 +463,17 @@ class PlayerPlane(AnimeSprite):
             self.trigger_move_left()
         elif key_pressed[self.controller.MOVE_RIGHT.value]:
             self.trigger_move_right()
+        # Keep shooting while the key is held (attack() limits the fire rate).
+        # Polled here because pygame.time.set_timer is not available on WASM
+        if key_pressed[self.controller.SHOOT.value]:
+            pygame.event.post(pygame.event.Event(
+                EVENT_PLAYER_SHOOT, {"player": self, "id": self.id}))
 
     def handle_event(self, e):
         if e.type == KEYDOWN:
-            # Space Button
+            # Space Button, shooting is handled in detect_key_pressed()
             if e.key == self.controller.SHOOT.value:
-                pygame.event.post(pygame.event.Event(
-                    EVENT_PLAYER_SHOOT, {"player": self, "id": self.id}))
-                pygame.time.set_timer(pygame.event.Event(
-                    EVENT_PLAYER_SHOOT, {"player": self, "id": self.id}), self.attack_speed)
+                pass
             else:
                 return False
 
@@ -486,8 +488,7 @@ class PlayerPlane(AnimeSprite):
                 pygame.event.post(pygame.event.Event(
                     EVENT_PLAYER_BOMB, {"player": self, "id": self.id}))
             elif e.key == self.controller.SHOOT.value:
-                pygame.time.set_timer(pygame.event.Event(
-                    EVENT_PLAYER_SHOOT, {"player": self, "id": self.id}), 0)
+                pass
             else:
                 return False
             return True

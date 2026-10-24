@@ -3,7 +3,7 @@ from pygame.locals import *
 from src.helper.image import get_image
 from src.helper.font import load_font, get_font, FontEntity
 from src.util.type import Pos
-from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR
+from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_RESUME, EVENT_RESTART
 from .Button import Button
 
@@ -59,7 +59,9 @@ class UIPause:
         self.buttons = []
         self.buttons.append(self.button_resume)
         self.buttons.append(self.button_restart)
-        self.buttons.append(self.button_exit)
+        # A browser page can not be closed by the game
+        if not IS_WEB:
+            self.buttons.append(self.button_exit)
 
         self.button_choosed = 0
 

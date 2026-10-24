@@ -1,3 +1,9 @@
+import sys
+
+# Running in a browser (pygbag build)
+IS_WEB = sys.platform == "emscripten"
+
+
 # Color values
 class COLOR:
     GRAY = (128, 128, 128)
@@ -18,7 +24,7 @@ SCREEN_WIDTH = 1000
 SCREEN_HEIGHT = 1000
 SCREEN_SIZE = (SCREEN_WIDTH, SCREEN_HEIGHT)
 
-"""
+r"""
 class RESOURCES(object):
     SOUNDS = {}
     IMAGES = {}
@@ -93,18 +99,18 @@ class RESOURCES(object):
     def LOAD_SOUNDS(cls):
         # 加载音效
         RESOURCES.SOUNDS.clear()
-        RESOURCES.SOUNDS.setdefault("Shield", _load_sound("Shield.wav", MAIN_VOLUME - 0.3))
-        RESOURCES.SOUNDS.setdefault("Player_Shoot", _load_sound("Player_Shoot.wav", MAIN_VOLUME - 0.2))
-        RESOURCES.SOUNDS.setdefault("Laser", _load_sound("Laser.wav", MAIN_VOLUME - 0.2))
-        RESOURCES.SOUNDS.setdefault("NucExplosion", [_load_sound("Explo.wav", MAIN_VOLUME - 0.4),
-                                                  _load_sound("Explo2.wav", MAIN_VOLUME - 0.2)])
-        RESOURCES.SOUNDS.setdefault("Player_Explo", _load_sound("Player_Explo.wav", MAIN_VOLUME))
+        RESOURCES.SOUNDS.setdefault("Shield", _load_sound("Shield.ogg", MAIN_VOLUME - 0.3))
+        RESOURCES.SOUNDS.setdefault("Player_Shoot", _load_sound("Player_Shoot.ogg", MAIN_VOLUME - 0.2))
+        RESOURCES.SOUNDS.setdefault("Laser", _load_sound("Laser.ogg", MAIN_VOLUME - 0.2))
+        RESOURCES.SOUNDS.setdefault("NucExplosion", [_load_sound("Explo.ogg", MAIN_VOLUME - 0.4),
+                                                  _load_sound("Explo2.ogg", MAIN_VOLUME - 0.2)])
+        RESOURCES.SOUNDS.setdefault("Player_Explo", _load_sound("Player_Explo.ogg", MAIN_VOLUME))
         RESOURCES.SOUNDS.setdefault("NuclearLaunch_Detected",
-                                    _load_sound("NuclearLaunch_Detected.wav", MAIN_VOLUME - 0.1))
-        RESOURCES.SOUNDS.setdefault("NuclearMissle_Ready", _load_sound("NuclearMissile_Ready.wav", MAIN_VOLUME - 0.1))
-        RESOURCES.SOUNDS.setdefault("UI1", _load_sound("UI1.wav", MAIN_VOLUME - 0.2))
-        RESOURCES.SOUNDS.setdefault("Liftoff1", _load_sound("Liftoff1.wav", MAIN_VOLUME))
-        RESOURCES.SOUNDS.setdefault("Liftoff2", _load_sound("Liftoff2.wav", MAIN_VOLUME - 0.2))
-        RESOURCES.SOUNDS.setdefault("Error", _load_sound("Error.wav", MAIN_VOLUME))
+                                    _load_sound("NuclearLaunch_Detected.ogg", MAIN_VOLUME - 0.1))
+        RESOURCES.SOUNDS.setdefault("NuclearMissle_Ready", _load_sound("NuclearMissile_Ready.ogg", MAIN_VOLUME - 0.1))
+        RESOURCES.SOUNDS.setdefault("UI1", _load_sound("UI1.ogg", MAIN_VOLUME - 0.2))
+        RESOURCES.SOUNDS.setdefault("Liftoff1", _load_sound("Liftoff1.ogg", MAIN_VOLUME))
+        RESOURCES.SOUNDS.setdefault("Liftoff2", _load_sound("Liftoff2.ogg", MAIN_VOLUME - 0.2))
+        RESOURCES.SOUNDS.setdefault("Error", _load_sound("Error.ogg", MAIN_VOLUME))
         
 """
