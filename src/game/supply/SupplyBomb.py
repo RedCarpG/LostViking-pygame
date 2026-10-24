@@ -8,6 +8,8 @@ from .Supply import Supply
 
 
 class SupplyBomb(Supply):
+    TYPE = SUPPLY_TYPE.Bomb
+
     def __init__(self, pos: Pos = None):
         super().__init__(pos,
                          frames={
@@ -16,7 +18,6 @@ class SupplyBomb(Supply):
                          },
                          frame_size=None
                          )
-        self.type = SUPPLY_TYPE.Life
 
     def get_by_player(self, player: PlayerPlane):
         player.add_bomb()

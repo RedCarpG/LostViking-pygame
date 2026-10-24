@@ -1,10 +1,9 @@
-
 import pygame
 from src.game.groups import G_Player1
-from src.game.animation.Effect import AttachEffect, UIEffect
+from src.game.animation.Effect import UIEffect
 from src.game.animation.AnimeSprite import AnimeSprite
-from src.helper.image.image_loader import get_image
-from src.setting import COLOR, SCREEN_HEIGHT
+from src.helper.image import get_image
+from src.setting import SCREEN_HEIGHT
 from src.util.type import Size
 from .UIState import UIState
 from .HealthBar import HealthBar

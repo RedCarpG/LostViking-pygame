@@ -1,20 +1,22 @@
-
 import random
 
 from pygame.math import Vector2
 from pygame.sprite import Group
-from src.game.animation import Effect
-from src.helper.sound.sound_loader import play_sound
 from src.setting import SCREEN_WIDTH
 from src.game.enemy import EnemyI, EnemyBullet
 from src.helper.image import get_image
-from src.util.type import Pos, Size
+from src.util.type import Pos
 
 
 class EnemyScout(EnemyI):
 
     MAX_HEALTH = 500
     SCORE = 500
+
+    DESTROY_SOUND = "SCOUT_DESTROY"
+
+    # At most this many Scouts at a time
+    MAX_NUMBER = 25
 
     GROUP = Group()
 
@@ -35,7 +37,7 @@ class EnemyScout(EnemyI):
 
     @classmethod
     def add_enemy_scout(cls, num) -> bool:
-        if len(cls.GROUP.sprites()) < 25:
+        if len(cls.GROUP.sprites()) < cls.MAX_NUMBER:
             for i in range(num):
                 x = random.randint(50, SCREEN_WIDTH - 50)
                 y = - 100
@@ -46,10 +48,6 @@ class EnemyScout(EnemyI):
 
     def shoot(self, target):
         BulletScout(Pos(self.rect.center))
-
-    def destroy(self, drop_supply=True) -> None:
-        play_sound("SCOUT_DESTROY")
-        return super().destroy(drop_supply)
 
 
 class BulletScout(EnemyBullet):
@@ -64,13 +62,3 @@ class BulletScout(EnemyBullet):
             damage=self.DAMAGE,
             image=get_image("Enemy/Laser2.png")
         )
-
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(5),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()

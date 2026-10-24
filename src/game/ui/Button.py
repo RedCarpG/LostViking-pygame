@@ -1,6 +1,5 @@
 import pygame
-from src.game.animation import AnimeSprite
-from src.util.type import Pos, Size
+from src.util.type import Pos
 from src.helper.font import get_font, render_text
 from pygame.sprite import AbstractGroup
 

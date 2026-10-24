@@ -1,9 +1,7 @@
 import pygame.event
-from pygame.locals import *
-from src.game.groups import G_Enemys
 
-from src.helper.sound.sound_loader import play_sound
-from src.game.custom_events import *
+from src.helper.sound import play_sound
+from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB, EVENT_BOMB_EXPLODE
 from .PlayerPlane import PlayerPlane
 from .PlayerBomb import PlayerNucBomb
 
@@ -53,7 +51,6 @@ def detect_custom_event(e: pygame.event.Event):
     elif e.type == EVENT_BOMB_EXPLODE:
         if hasattr(e, "player"):
             _handle_player_bomb_explode_event(e.player)
-            print("Bomb explode")
     else:
         return False
     return True

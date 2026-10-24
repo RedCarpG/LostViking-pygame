@@ -5,13 +5,12 @@ Some methods to modify a Surface:
     pygame.transform.smoothscale(Surface) -> Surface
 """
 import os
-import sys
+import logging
 import pygame
 from pygame.display import get_init
 from dataclasses import dataclass
-import logging
-import sys
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
+log = logging.getLogger(__name__)
 
 _image_dir = os.path.join(os.path.split(os.path.abspath(__file__))[
                           0], '../../asset/image')
@@ -66,9 +65,9 @@ def load_image(filename: str, **kwargs: ImageType) -> pygame.surface.Surface:
 
     try:
         image = pygame.image.load(fullname)
-        logging.info("<SUCCESS> Image [{}] loaded !".format(filename))
+        log.debug("Image [%s] loaded", filename)
     except pygame.error:
-        logging.error("<ERROR> Image [{}] not found".format(filename))
+        log.error("Image [%s] not found", filename)
         raise SystemExit(str(pygame.get_error()))
 
     # Convert the Surface for better performance(convert_alpha() if with transparent pixels)
@@ -91,6 +90,13 @@ def load_image(filename: str, **kwargs: ImageType) -> pygame.surface.Surface:
 
     _IMAGE[filename] = image
     return image
+
+
+def load_images(filenames) -> None:
+    """ Load every image of a list (an asset manifest) that is not loaded yet, see load_image """
+    for filename in filenames:
+        if filename not in _IMAGE.BUFFER:
+            load_image(filename)
 
 
 def get_image(label: str, **kwargs: ImageType) -> pygame.surface.Surface:
@@ -146,3 +152,21 @@ def get_scaled_image(label: str, factor: int, height: int = None) -> pygame.surf
         _SCALED[key] = pygame.transform.scale(
             image, (image.get_width() * factor, image.get_height() * factor))
     return _SCALED[key]
+
+
+_ROTATED = {}
+
+
+def get_rotated_image(image: pygame.Surface, angle: float) -> pygame.surface.Surface:
+    """ `image` turned by `angle` degrees (counterclockwise), cached by whole degree.
+    Bullets are turned on every shot: the same few angles come back all the time
+    """
+    angle = round(angle) % 360
+    if angle == 0:
+        return image
+    key = (image, angle)
+    rotated = _ROTATED.get(key)
+    if rotated is None:
+        rotated = pygame.transform.rotate(image, angle)
+        _ROTATED[key] = rotated
+    return rotated

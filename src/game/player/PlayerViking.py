@@ -1,10 +1,9 @@
-
 import pygame
 
 from collections.abc import Sequence
 from src.game.animation.Effect import Effect
 from src.util.type import Pos, Size
-from src.helper.image import get_image
+from src.helper.image import get_image, get_rotated_image
 from .PlayerPlane import PlayerPlane
 from .PlayerWeapon import PlayerWeapon, PlayerBullet
 
@@ -75,7 +74,7 @@ class PlayerBulletViking(PlayerBullet):
 
     def _rotate(self, angle: int) -> None:
         temp = self.rect.center
-        self.image = pygame.transform.rotate(self.image, angle)
+        self.image = get_rotated_image(self.image, angle)
         self.rect = self.image.get_rect(center=temp)
 
     def hit(self):

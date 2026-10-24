@@ -1,14 +1,12 @@
 import random
 from pygame import Vector2
-from pygame.transform import rotate
 from pygame.sprite import Group
-from src.game.animation import Effect
-from src.helper.sound.sound_loader import play_sound
+from src.helper.sound import play_sound
 from src.game.enemy import EnemyIII, EnemyBullet
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.helper.image import get_image
 from src.util.angle import cal_angle
-from src.util.type import Pos, Size
+from src.util.type import Pos
 
 
 class EnemyInterceptor(EnemyIII):
@@ -27,6 +25,7 @@ class EnemyInterceptor(EnemyIII):
 
     HITBOX = (20, 20)
     EXPLOSION = "small"
+    DESTROY_SOUND = "ENEMY_DESTROY"
 
     MOVE_RAD = 300
 
@@ -76,10 +75,6 @@ class EnemyInterceptor(EnemyIII):
                            min(self.MOVE_BOTTOM_LIMIT, self.rect.center[1] + self.MOVE_RAD))
         self.path.append([x, y])
 
-    def destroy(self, drop_supply=True) -> None:
-        play_sound("ENEMY_DESTROY")
-        return super().destroy(drop_supply)
-
 
 class BulletInterceptor(EnemyBullet):
 
@@ -91,22 +86,6 @@ class BulletInterceptor(EnemyBullet):
             pos,
             speed=Vector2([0, self.SPEED]),
             damage=self.DAMAGE,
-            image=get_image("Enemy/Laser2.png")
+            image=get_image("Enemy/Laser2.png"),
+            angle=angle
         )
-        self._rotate(angle)
-
-    def _rotate(self, angle: int) -> None:
-        temp = self.rect.center
-        self.image = rotate(self.image, angle)
-        self.rect = self.image.get_rect(center=temp)
-        self.speed = self.speed.rotate(-angle)
-
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(5),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()

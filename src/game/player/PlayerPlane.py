@@ -2,7 +2,6 @@
 Includes:
     -> PlayerPlane
 """
-from enum import Flag
 import random
 import pygame
 from pygame import Vector2
@@ -23,9 +22,6 @@ from src.game.animation.Effect import AttachEffect
 from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB
 from .player_control import PLAYER1_CONTROL, PLAYER2_CONTROL
 from .PlayerWeapon import PlayerWeapon
-import logging
-import sys
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 class PlayerPlane(AnimeSprite):
@@ -113,7 +109,8 @@ class PlayerPlane(AnimeSprite):
     def update(self) -> None:
         """ Update method from Sprite, is called per frame """
         super().update()
-        if not self.is_active and self.current_state == "DESTROY"                 and self._current_frame_index >= self.DESTROY_FRAMES_SHOWN:
+        if not self.is_active and self.current_state == "DESTROY" \
+                and self._current_frame_index >= self.DESTROY_FRAMES_SHOWN:
             self.image = self._hidden_image()
         self._reload()
         if self._count_shake_cooldown > 0:
@@ -374,18 +371,14 @@ class PlayerPlane(AnimeSprite):
 
     def add_life(self) -> bool:
         if self._life >= self.LIFE_MAX:
-            logging.info("Add Life: Max lives reached")
             return False
         self._life += 1
-        logging.info("Add Life")
         return True
 
     def dec_life(self) -> bool:
         if self._life <= 0:
-            logging.warning("Error: Can't decrease life under 0.")
             return False
         self._life -= 1
-        logging.info("Decrease Life")
         return True
 
     # ----- Weapon & Level
@@ -452,9 +445,7 @@ class PlayerPlane(AnimeSprite):
     def add_health(self) -> bool:
         if self.health < self.MAX_HEALTH:
             self._health = self.MAX_HEALTH
-            logging.info("Add Health")
             return True
-        logging.info("Add Health: Full health reached")
         return False
 
     # ----- Bomb
@@ -464,18 +455,14 @@ class PlayerPlane(AnimeSprite):
 
     def add_bomb(self) -> bool:
         if self._bomb_count >= self.BOMB_COUNT_MAX:
-            logging.info("Add Bomb: Max Bomb number reached")
             return False
         self._bomb_count += 1
-        logging.info("Add Bomb")
         return True
 
     def dec_bomb(self) -> bool:
         if self._bomb_count <= 0:
-            logging.warning("Error: Can't decrease bomb under 0.")
             return False
         self._bomb_count -= 1
-        logging.info("Decrese Bomb")
         return True
 
     # ----------------- Reset method -----------------

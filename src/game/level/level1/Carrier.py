@@ -1,11 +1,10 @@
 import random
-import pygame
 from pygame import Vector2
 from src.game.enemy import EnemyBoss, EnemyBullet
-from src.game.animation import AttachEffect, Effect
+from src.game.animation import AttachEffect
 from src.helper.image import get_image, get_scaled_image
 from src.helper.sound import play_sound
-from src.util.type import Pos, Size
+from src.util.type import Pos
 from src.util.inertial import accelerate, decelerate
 from .Interceptor import EnemyInterceptor
 from . import CarrierLaser
@@ -239,6 +238,7 @@ class BulletCarrierOrb(EnemyBullet):
     """ Energy orb of the fan and ring attacks """
 
     DAMAGE = 25
+    HIT_SPREAD = 4
 
     def __init__(self, pos: Vector2, velocity: Vector2, color: str):
         super().__init__(
@@ -248,39 +248,20 @@ class BulletCarrierOrb(EnemyBullet):
             image=get_image(f"Enemy/Carrier/Orb{color}.png")
         )
 
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(4),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()
-
 
 class BulletCarrierBolt(EnemyBullet):
     """ Fast aimed bolt of the volley attack """
 
     DAMAGE = 30
+    HIT_SPREAD = 4
 
     def __init__(self, pos: Vector2, velocity: Vector2):
-        # The art points down: turn it to the direction it flies
-        angle = -Vector2(0, 1).angle_to(velocity)
+        # The art points down: turn it (and the speed) to the direction it flies
         super().__init__(
             Pos([pos.x, pos.y]),
-            speed=velocity,
+            speed=Vector2(0, velocity.length()),
             damage=self.DAMAGE,
-            image=pygame.transform.rotate(get_image("Enemy/Laser2.png"), angle)
+            image=get_image("Enemy/Laser2.png"),
+            angle=-Vector2(0, 1).angle_to(velocity)
         )
-
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(4),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()
 

@@ -59,7 +59,6 @@ def prepare() -> None:
 
 
 def images() -> dict:
-    global _images
     if _images is None:
         for _ in _build():
             pass

@@ -1,5 +1,4 @@
 import pygame
-from pygame.locals import *
 from src.helper.font import load_font, get_font, render_text
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_RESTART, EVENT_MAIN_MENU

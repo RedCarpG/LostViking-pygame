@@ -8,6 +8,8 @@ from .SUPPLY_TYPE import SUPPLY_TYPE
 
 
 class SupplyLife(Supply):
+    TYPE = SUPPLY_TYPE.Life
+
     def __init__(self, pos: Pos = None):
         super().__init__(pos,
                          frames={
@@ -16,7 +18,6 @@ class SupplyLife(Supply):
                          },
                          frame_size=None
                          )
-        self.type = SUPPLY_TYPE.Life
 
     def get_by_player(self, player: PlayerPlane):
         if not player.add_health():

@@ -1,25 +1,26 @@
 import asyncio
 from enum import Enum
-from pygame.locals import *
 import pygame
+from pygame.locals import QUIT, KEYUP, K_TAB, K_F3, K_ESCAPE, SRCALPHA, \
+    WINDOWFOCUSLOST, WINDOWHIDDEN, WINDOWMINIMIZED, WINDOWFOCUSGAINED, WINDOWSHOWN, WINDOWRESTORED
 from .custom_events import EVENT_RESTART, EVENT_RESUME, EVENT_START, EVENT_START_TEST, \
     EVENT_MAIN_MENU, EVENT_OPEN_SETTINGS, EVENT_CLOSE_SETTINGS
 
-from src.helper.image import *
-from src.helper.font import *
-from src.helper.sound import *
-from src.setting import *
+from src.helper.image import load_image
+from src.helper.sound import load_music, play_music
+from src.setting import MAIN_VOLUME, SCREEN_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
 
-from src.game.groups import *
-from src.game.player import *
-from src.game.ui import *
-from src.game.supply import *
-from src.game.level import *
+from src.game.groups import G_Player1, G_Players, G_BOSS, G_Bomb, G_Enemys, G_Enemy_Bullets, \
+    G_Player_Bullets, G_Supplies, G_Effects
+from src.game.player import PlayerViking, load_asset_player, detect_custom_event, reset_player_events
+from src.game.ui import UI, load_asset_ui, UIIntro, UIPause, UIResult, UISettings, Scoreboard, \
+    FPSCounter, Background, TestPanel
+from src.game.supply import load_asset_supply, supply_event_config, update_supply_timer, supply_events_handler
+from src.game.level import Level1
 from src.game.animation import ScreenShake, warmup
 from src.game.animation.Explosion import prepare as prepare_explosions
 from src.game.GameSettings import GameSettings
 from src.game.TestMode import TestMode
-from src.util.type import Pos
 from src.util.collide_detect import hit_rect
 
 
@@ -230,7 +231,8 @@ class Game:
         self.background.update()
         ScreenShake.update()
         self.scoreboard.update()
-        self.fps_counter.update()
+        if GameSettings.show_fps:
+            self.fps_counter.update()
         self.ui.update()
         self.level.update()
         update_supply_timer()

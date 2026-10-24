@@ -1,5 +1,4 @@
-
-from src.game.animation import AnimeSprite, AnimeSprite
+from src.game.animation import AnimeSprite
 from src.util.type import Pos, Size
 from src.game.groups import G_Effects
 

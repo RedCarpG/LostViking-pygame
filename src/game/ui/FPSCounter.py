@@ -1,6 +1,5 @@
 from src.setting import COLOR
-from src.helper.font import FontEntity, load_font, get_font
-from src.util.type import Pos
+from src.helper.font import FontEntity, get_font
 
 
 class FPSCounter:
@@ -9,12 +8,17 @@ class FPSCounter:
 
         self.surface = surface
         self.clock = clock
+        self._fps = int(self.clock.get_fps())
         self.fps_text = FontEntity(surface, get_font("Scoreboard"),
-                                   ("FPS: " + str(int(self.clock.get_fps()))), (10, 30), color=COLOR.WHITE)
+                                   f"FPS: {self._fps}", (10, 30), color=COLOR.WHITE)
         self.fps_text.move_center(pos)
 
     def blit(self):
         self.fps_text.blit()
 
     def update(self):
-        self.fps_text.change_text("FPS: " + str(int(self.clock.get_fps())))
+        # Render the text again only when the value changes
+        fps = int(self.clock.get_fps())
+        if fps != self._fps:
+            self._fps = fps
+            self.fps_text.change_text(f"FPS: {fps}")

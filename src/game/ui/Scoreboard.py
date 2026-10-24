@@ -1,4 +1,3 @@
-import pygame
 from src.helper.font import get_font, render_text
 from src.game.groups import G_Player1
 

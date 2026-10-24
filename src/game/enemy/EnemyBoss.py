@@ -1,8 +1,6 @@
-
 from enum import Enum
 import random
 import pygame
-from src.game.groups import G_BOSS
 from src.util.type import Pos, Size
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.util.inertial import decelerate, accelerate
@@ -10,9 +8,6 @@ from src.game.groups import G_BOSS, G_Player1
 from src.game.animation import Explosion, Spark, ScreenShake
 from src.helper.sound import play_sound
 from .EnemyI import EnemyI
-import logging
-import sys
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 class BossActionPhase(Enum):

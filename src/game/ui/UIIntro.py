@@ -1,7 +1,7 @@
 import math
 import pygame
 from pygame.locals import *
-from src.helper.font import load_font, get_font, del_font, render_text
+from src.helper.font import load_font, get_font, render_text
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_START, EVENT_START_TEST, EVENT_OPEN_SETTINGS
 from .Button import Menu
@@ -65,7 +65,3 @@ class UIIntro:
 
     def reset(self):
         self.menu.reset()
-
-    def __del__(self):
-        del_font("Title")
-        del_font("IntroHint")

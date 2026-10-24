@@ -1,7 +1,5 @@
 import math
 
-from pygame import Vector2
-
 from src.util.type import Pos
 
 
@@ -11,8 +9,6 @@ def cal_angle(base_point: Pos, target_point: Pos) -> int:
     :param target_point
     :return int angle degree value
     """
-    vec = Vector2(0, 1)
-
     if base_point.y == target_point.y:
         if target_point.x > base_point.x:
             angle = 90

@@ -7,9 +7,8 @@ from src.game.enemy import EnemyII, EnemyBullet, EnemyStatusBar
 from src.game.groups import G_Effects
 from src.helper.image import get_image
 from src.setting import SCREEN_WIDTH
-from src.util.type import Pos, Size
-from pygame.transform import rotate
-from src.game.animation import AnimeSprite, AttachEffect, Effect, ScreenShake
+from src.util.type import Pos
+from src.game.animation import AnimeSprite, ScreenShake
 from src.helper.sound import play_sound
 
 
@@ -29,6 +28,7 @@ class EnemyPhoenix(EnemyII):
     # Body and wing roots, the same at every angle
     HITBOX = (60, 60)
     EXPLOSION = "large"
+    DESTROY_SOUND = "PHOENIX_DESTROY"
 
     def __init__(self, pos, is_left):
         super().__init__(
@@ -60,40 +60,25 @@ class EnemyPhoenix(EnemyII):
         BulletPhoenix(Pos(correction + self.rect.center), self.angle)
         play_sound("PHOENIX_LASER")
 
-    # Rewrite hit to add Shield
-    def hit(self, damage=100, **kwargs):
-        if self.is_active:
-            self._count_regen_delay = self.SHIELD_REGEN_DELAY
-            self.status_bar.show()
-            if self.shield > 0:
-                self.shield -= damage
-                play_sound("SHIELD")
-                if self.shield <= 0:
-                    self.shield = 0
-                    self._break_shield()
-                else:
-                    hit_pos = kwargs.get("hit_pos")
-                    self.shield_bubble.pulse(hit_pos)
-                    ShieldImpactEffect(self, hit_pos)
-            else:
-                self._health -= damage
-                if self._health > 0:
-                    # Get Hit effect
-                    AttachEffect(
-                        self,
-                        frames={
-                            "IDLE": self.frames["HIT"]
-                        },
-                        frame_size=self.frame_size,
-                        angle=self.angle
-                    )
-                    self.hit_feedback()
-                else:
-                    # HP below 0
-                    self.destroy()
-            return True
-        else:
+    # The shield takes the hits while it lasts
+    def hit(self, damage=100, **kwargs) -> bool:
+        if not self.is_active:
             return False
+        self._count_regen_delay = self.SHIELD_REGEN_DELAY
+        self.status_bar.show()
+        if self.shield > 0:
+            self.shield -= damage
+            play_sound("SHIELD")
+            if self.shield <= 0:
+                self.shield = 0
+                self._break_shield()
+            else:
+                hit_pos = kwargs.get("hit_pos")
+                self.shield_bubble.pulse(hit_pos)
+                ShieldImpactEffect(self, hit_pos)
+        else:
+            self._damage_hull(damage)
+        return True
 
     def _break_shield(self):
         ShieldBreakEffect(self.rect.center)
@@ -110,10 +95,6 @@ class EnemyPhoenix(EnemyII):
                 play_sound("SHIELD")
                 self.shield_bubble.pulse()
             self.shield = min(self.MAX_SHIELD, self.shield + self.SHIELD_REGEN)
-
-    def destroy(self, drop_supply=True) -> None:
-        play_sound("PHOENIX_DESTROY")
-        return super().destroy(drop_supply)
 
     @classmethod
     def add_enemy_phoenix(cls, side=None) -> bool:
@@ -141,25 +122,9 @@ class BulletPhoenix(EnemyBullet):
             pos,
             speed=Vector2([0, self.SPEED]),
             damage=self.DAMAGE,
-            image=get_image("Enemy/laser.png")
+            image=get_image("Enemy/laser.png"),
+            angle=angle
         )
-        self._rotate(angle)
-
-    def _rotate(self, angle: int) -> None:
-        temp = self.rect.center
-        self.image = rotate(self.image, angle)
-        self.rect = self.image.get_rect(center=temp)
-        self.speed = self.speed.rotate(-angle)
-
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(5),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()
 
 
 class PhoenixShieldBubble(AnimeSprite):

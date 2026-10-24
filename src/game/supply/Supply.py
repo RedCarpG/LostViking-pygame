@@ -48,13 +48,14 @@ class Supply(AnimeSprite, abc.ABC):
     BOB_PERIOD = 90
 
     SCORE = 1000
+    # SUPPLY_TYPE of the subclass
+    TYPE = None
 
     def __init__(self, pos: Pos, frames, frame_size: Size):
         super().__init__(frames, frame_size)
 
         self.is_active = True
 
-        self.supply_type = None
         self.add(G_Supplies)
 
         self._pos = Vector2(0, 0)

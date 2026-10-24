@@ -1,9 +1,7 @@
 import pygame
-from src.helper.font import FontEntity, get_font
-from src.setting import COLOR, SCREEN_WIDTH
+from src.setting import SCREEN_WIDTH
 from src.game.groups import G_BOSS
-from src.helper.image.image_loader import get_image
-from src.setting import COLOR, SCREEN_HEIGHT
+from src.helper.image import get_image
 from .UIState import UIState
 from .HealthBar import HealthBar
 

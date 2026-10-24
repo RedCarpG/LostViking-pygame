@@ -1,20 +1,14 @@
-
-from abc import ABC, abstractmethod
-import logging
-import sys
+from abc import abstractmethod
 import random
 import pygame
 from pygame import Vector2
-from src.game.animation import AttachEffect
 
-from src.game.animation import AnimeSprite, ScreenShake, Explosion
+from src.game.animation import AnimeSprite, AttachEffect, ScreenShake, Explosion
 from src.game.groups import G_Enemys
 from src.util.type import Pos, Size
 from src.helper.sound import play_sound
 from src.setting import SCREEN_HEIGHT
 from .BasicEnemy import BasicEnemy
-
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 class EnemyI(AnimeSprite, BasicEnemy):
@@ -44,6 +38,8 @@ class EnemyI(AnimeSprite, BasicEnemy):
 
     # Explosion when destroyed (see Explosion.SIZES)
     EXPLOSION = "medium"
+    # Sound played when destroyed, None: no sound
+    DESTROY_SOUND = None
     # Frames of the destroy animation shown under the explosion (the last ones are
     # dark silhouettes)
     DESTROY_FRAMES_SHOWN = 3
@@ -100,29 +96,33 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self._pos += self._speed
         self.rect.center = (round(self._pos.x), round(self._pos.y))
 
-    def hit(self, damage=100, target=None, **kwargs) -> None:
+    def hit(self, damage=100, target=None, **kwargs) -> bool:
         """ This function is called in collision detection
         :param kwargs: hit_pos, where the bullet hit (used by shields)
+        :return: False if this enemy can not be hit any more (already destroyed)
         """
-        if self.is_active:
-            self._health -= damage
-            if self._health > 0:
-                # Get Hit effect
-                AttachEffect(
-                    self,
-                    frames={
-                        "IDLE": self.frames["HIT"]
-                    },
-                    frame_size=self.frame_size,
-                    angle=self.angle
-                )
-                self.hit_feedback()
-            else:
-                # HP below 0
-                self.destroy()
-            return True
-        else:
+        if not self.is_active:
             return False
+        self._damage_hull(damage)
+        return True
+
+    def _damage_hull(self, damage) -> None:
+        """ Take damage on the health, destroyed when it reaches 0 """
+        self._health -= damage
+        if self._health > 0:
+            # Get Hit effect
+            AttachEffect(
+                self,
+                frames={
+                    "IDLE": self.frames["HIT"]
+                },
+                frame_size=self.frame_size,
+                angle=self.angle
+            )
+            self.hit_feedback()
+        else:
+            # HP below 0
+            self.destroy()
 
     def hit_feedback(self) -> None:
         """ Make a hit feel solid: white flash, small push back and a hit sound """
@@ -157,6 +157,8 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self.is_active = False
         self._speed *= 0.5
         self.set_anime_state("DESTROY")
+        if self.DESTROY_SOUND is not None:
+            play_sound(self.DESTROY_SOUND)
         Explosion(self.rect.center, self.EXPLOSION)
         ScreenShake.add(self.SHAKE_DESTROY)
         from src.game.supply import drop_supply_event
