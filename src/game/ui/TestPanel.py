@@ -129,9 +129,14 @@ class TestPanel:
             self._text_cache[key] = get_font(font_name).render(text, True, color)
         return self._text_cache[key]
 
-    def blit(self):
+    def blit(self, target=None, offset=(0, 0)):
+        """ Draw the panel on `target` (default: the screen). `offset` is subtracted from
+        its position, so it stays still on screen when drawn on the shaking world surface
+        """
+        target = target or self.surface
+        ox, oy = offset
         if not self.visible:
-            self.surface.blit(self.tag, self.tag.get_rect(topright=(SCREEN_WIDTH - 10, 62)))
+            target.blit(self.tag, self.tag.get_rect(topright=(SCREEN_WIDTH - 10 - ox, 62 - oy)))
             return
 
         title_height = 30
@@ -174,4 +179,4 @@ class TestPanel:
 
         hint = self._text("PanelHint", "Press the key or click a row", self.HEADER_COLOR)
         panel.blit(hint, hint.get_rect(midleft=(self.PADDING, y + hint_height // 2 + 2)))
-        self.surface.blit(panel, (self.LEFT, self.TOP))
+        target.blit(panel, (self.LEFT - ox, self.TOP - oy))

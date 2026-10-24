@@ -249,6 +249,10 @@ class Game:
         target = self.world_surface if shaking else self.screen
 
         self.background.draw(target)
+        # Test panel behind the sprites so it never hides them; on the shaking surface it is
+        # drawn against the shake offset so it stays still on screen
+        if TestMode.enabled:
+            self.test_panel.blit(target, ScreenShake.offset if shaking else (0, 0))
         G_Bomb.draw(target)
         G_Enemy_Bullets.draw(target)
         G_Player_Bullets.draw(target)
@@ -270,8 +274,6 @@ class Game:
         self.scoreboard.blit()
         if GameSettings.show_fps:
             self.fps_counter.blit()
-        if TestMode.enabled:
-            self.test_panel.blit()
 
     def _check_round_end(self):
         if self._count_end_delay > 0:
