@@ -37,7 +37,7 @@ class UIPause:
         self.surface.blit(self.pause_text, self.pause_rect)
 
     def handle_event(self, event):
-        if event.type == pygame.KEYUP and event.key == K_ESCAPE:
+        if event.type == pygame.KEYUP and event.key in (K_ESCAPE, K_p):
             pygame.event.post(pygame.event.Event(EVENT_RESUME))
             return True
         return self.menu.handle_event(event)

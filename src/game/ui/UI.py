@@ -52,6 +52,7 @@ FONTS = [
     ("Silkscreen-Bold.ttf", 32, "ScoreValue"),
     ("Silkscreen-Bold.ttf", 32, "MenuTitle"),
     ("Silkscreen-Regular.ttf", 24, "MenuText"),
+    ("Silkscreen-Bold.ttf", 16, "FloatText"),
 ]
 
 IMAGES = [

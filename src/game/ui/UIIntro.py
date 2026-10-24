@@ -4,6 +4,7 @@ from pygame.locals import *
 from src.helper.font import load_font, get_font, render_text
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_START, EVENT_START_TEST, EVENT_OPEN_SETTINGS
+from src.game.GameSettings import GameSettings
 from .Button import Menu
 from .UIPause import post_event
 
@@ -46,14 +47,26 @@ class UIIntro:
 
         self.hint_text = render_text(
             get_font("IntroHint"),
-            "WASD  MOVE      SPACE  SHOOT      Q  BOMB      ESC  PAUSE",
+            "WASD / ARROWS  MOVE     SPACE  SHOOT     Q  BOMB     P  PAUSE",
             self.HINT_COLOR, spacing=0)
         self.hint_rect = self.hint_text.get_rect(
             center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.76))
 
+        self.best_text = None
+        self._render_best()
+
+    def _render_best(self):
+        """ Best score under the title (none before the first round) """
+        best = GameSettings.best_score
+        self.best_text = render_text(get_font("IntroHint"), f"BEST  {best:,}", self.HINT_COLOR,
+                                     spacing=1) if best > 0 else None
+
     def blit(self):
         self.surface.blit(self.title, self.title_rect)
         self.surface.blit(self.line, self.line_rect)
+        if self.best_text is not None:
+            self.surface.blit(self.best_text, self.best_text.get_rect(
+                center=(SCREEN_WIDTH / 2, self.line_rect.bottom + 30)))
         self.menu.blit()
         self.surface.blit(self.hint_text, self.hint_rect)
 
@@ -65,3 +78,4 @@ class UIIntro:
 
     def reset(self):
         self.menu.reset()
+        self._render_best()

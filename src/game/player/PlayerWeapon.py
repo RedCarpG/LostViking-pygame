@@ -11,10 +11,12 @@ from src.game.player import PlayerPlane
 
 
 class PlayerWeapon(ABC):
-    LEVEL_MAX = 10
+    LEVEL_MAX = 5
 
     BASIC_DMG = 80
     INC_DMG = 10
+    # Frames between two shots, by level (the last value for the higher levels)
+    FIRE_INTERVALS = (20,)
 
     def __init__(self, player: PlayerPlane):
         self.player = player
@@ -27,11 +29,17 @@ class PlayerWeapon(ABC):
     def level(self) -> int:
         return self._level
 
-    def level_up(self) -> None:
+    @property
+    def fire_interval(self) -> int:
+        return self.FIRE_INTERVALS[min(self._level, len(self.FIRE_INTERVALS)) - 1]
+
+    def level_up(self) -> bool:
+        """ :return: False if the weapon was already at its highest level """
         if self._level >= self.LEVEL_MAX:
-            return
+            return False
         self._level += 1
         self._damage += self._inc_dmg
+        return True
 
     def level_down(self) -> None:
         if self._level <= 1:
@@ -93,7 +101,7 @@ class PlayerBullet(pygame.sprite.Sprite, ABC):
             shielded = getattr(enemy, "shield", 0) > 0
             enemy.hit(self.damage, hit_pos=self.rect.center)
             if not enemy.is_active:
-                self.player.add_score(enemy.score)
+                self.player.credit_kill(enemy)
             if shielded:
                 self.kill()
             else:

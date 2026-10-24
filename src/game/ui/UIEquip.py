@@ -6,6 +6,7 @@ from src.helper.image.image_loader import get_image
 from src.setting import COLOR, SCREEN_HEIGHT
 from src.util.type import Size
 from src.helper.font import FontEntity, get_font
+from src.game.player import PlayerPlane
 from .UIState import UIState
 
 
@@ -31,11 +32,12 @@ class UIEquip:
         self.bomb_rect = pygame.Rect(16, 76, 42, 42)
         self._player_level = self.player_g.sprite.level
         self._player_bomb_count = self.player_g.sprite.bomb_count
+        self._level_max = self.player_g.sprite.weapon.LEVEL_MAX
         self.weapon_text = FontEntity(self.ui_equip, get_font("Equip"),
-                                      (f"{self._player_level}/5"), color=COLOR.WHITE)
+                                      (f"{self._player_level}/{self._level_max}"), color=COLOR.WHITE)
         self.weapon_text.rect.bottomright = (self.wepon_rect.right, self.wepon_rect.bottom + 2)
         self.bomb_text = FontEntity(self.ui_equip, get_font("Equip"),
-                                    (f"{self._player_bomb_count}/3"), color=COLOR.WHITE)
+                                    (f"{self._player_bomb_count}/{PlayerPlane.BOMB_COUNT_MAX}"), color=COLOR.WHITE)
         self.bomb_text.rect.bottomright = (self.bomb_rect.right, self.bomb_rect.bottom + 2)
 
         self.light1 = AnimeSprite(
@@ -70,7 +72,7 @@ class UIEquip:
         self.group_light.update()
         if self.player_g.sprite.level != self._player_level:
             self._player_level = self.player_g.sprite.level
-            self.weapon_text.change_text(f"{self._player_level}/5")
+            self.weapon_text.change_text(f"{self._player_level}/{self._level_max}")
         if self.player_g.sprite.bomb_count != self._player_bomb_count:
             self._player_bomb_count = self.player_g.sprite.bomb_count
             if self._player_bomb_count == 0:
@@ -81,7 +83,7 @@ class UIEquip:
                 self.light2.frames["IDLE"] = get_image(
                     "UI/Equip/Left_LightYellow.png")
                 self.bomb_text.change_color(COLOR.WHITE)
-            self.bomb_text.change_text(f"{self._player_bomb_count}/3")
+            self.bomb_text.change_text(f"{self._player_bomb_count}/{PlayerPlane.BOMB_COUNT_MAX}")
         if self.state == UIState.Entry:
             self.ui_equip_rect.right += self.MOVE_SPEED
             if self.ui_equip_rect.left >= 0:
@@ -94,12 +96,13 @@ class UIEquip:
                 self.state = UIState.Hidden
 
     def blit(self):
-        self.surface.blit(self.ui_equip, self.ui_equip_rect)
+        # Draw the icons, lights and texts on the panel first, then the panel on the screen
         self.ui_equip.blit(self.weapon_img, self.wepon_rect)
         self.ui_equip.blit(self.bomb_img, self.bomb_rect)
         self.group_light.draw(self.ui_equip)
         self.weapon_text.blit()
         self.bomb_text.blit()
+        self.surface.blit(self.ui_equip, self.ui_equip_rect)
 
     def toggle_hidden(self):
         if self.state == UIState.Idle:

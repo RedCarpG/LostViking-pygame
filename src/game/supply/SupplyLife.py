@@ -1,33 +1,19 @@
-from src.util.type import Size, Pos
-from src.game.animation.Effect import Effect
-from src.helper.image import get_image
+from src.game.animation.FloatingText import LIFE_COLOR, MAX_COLOR
 from src.game.player import PlayerPlane
-from src.helper.sound import play_sound
-from .Supply import Supply
 from .SUPPLY_TYPE import SUPPLY_TYPE
+from .Supply import Supply
 
 
 class SupplyLife(Supply):
+    """ Repairs the plane, or gives one more life when it is not damaged """
     TYPE = SUPPLY_TYPE.Life
+    IMAGE = "Supply/SupplyLife.png"
+    GET_EFFECT = "Supply/SupplyGetLife.png"
+    GET_SOUND = "SUPPLY_LIFE"
 
-    def __init__(self, pos: Pos = None):
-        super().__init__(pos,
-                         frames={
-                             "BASE": get_image("Supply/SupplyBase.png"),
-                             "IDLE": get_image("Supply/SupplyLife.png")
-                         },
-                         frame_size=None
-                         )
-
-    def get_by_player(self, player: PlayerPlane):
-        if not player.add_health():
-            player.add_life()
-        play_sound("SUPPLY_LIFE")
-        Effect(
-            pos=Pos(self.rect.center),
-            frames={
-                "IDLE": get_image("Supply/SupplyGetLife.png")
-            },
-            frame_size=Size([50, 50])
-        )
-        return super().get_by_player(player)
+    def apply(self, player: PlayerPlane):
+        if player.add_health():
+            return "REPAIRED", LIFE_COLOR
+        if player.add_life():
+            return "+1 LIFE", LIFE_COLOR
+        return "LIVES MAX", MAX_COLOR

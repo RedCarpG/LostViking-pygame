@@ -1,7 +1,7 @@
 import asyncio
 from enum import Enum
 import pygame
-from pygame.locals import QUIT, KEYUP, K_TAB, K_F3, K_ESCAPE, SRCALPHA, \
+from pygame.locals import QUIT, KEYUP, K_TAB, K_F3, K_ESCAPE, K_p, SRCALPHA, \
     WINDOWFOCUSLOST, WINDOWHIDDEN, WINDOWMINIMIZED, WINDOWFOCUSGAINED, WINDOWSHOWN, WINDOWRESTORED
 from .custom_events import EVENT_RESTART, EVENT_RESUME, EVENT_START, EVENT_START_TEST, \
     EVENT_MAIN_MENU, EVENT_OPEN_SETTINGS, EVENT_CLOSE_SETTINGS
@@ -11,7 +11,7 @@ from src.helper.sound import load_music, play_music
 from src.setting import MAIN_VOLUME, SCREEN_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
 
 from src.game.groups import G_Player1, G_Players, G_BOSS, G_Bomb, G_Enemys, G_Enemy_Bullets, \
-    G_Player_Bullets, G_Supplies, G_Effects
+    G_Player_Bullets, G_Supplies, G_Effects, G_Texts
 from src.game.player import PlayerViking, load_asset_player, detect_custom_event, reset_player_events
 from src.game.ui import UI, load_asset_ui, UIIntro, UIPause, UIResult, UISettings, Scoreboard, \
     FPSCounter, Background, TestPanel
@@ -96,8 +96,10 @@ class Game:
         self.overlay = pygame.Surface(SCREEN_SIZE, SRCALPHA)
         self.overlay.fill((4, 6, 16, 190))
         # The frozen game with the dark layer, made once when a menu opens over the round
-        # (drawing the whole world and blending the layer every frame is slow on the web)
-        self._frozen_frame = None
+        # (drawing the whole world and blending the layer every frame is slow on the web).
+        # One surface, reused: _frozen_valid says if it holds the current frozen game
+        self._frozen_frame = pygame.Surface(SCREEN_SIZE).convert()
+        self._frozen_valid = False
 
         # Level
         self.level = Level1()
@@ -106,7 +108,8 @@ class Game:
         self.state = GameState.INTRO
         # State to go back to when the settings screen is closed
         self._settings_return_state = GameState.INTRO
-        self.best_score = 0
+        # Game frames played in the current round (shown on the result screen)
+        self._round_frames = 0
         self._count_end_delay = 0
         self._end_state = None
 
@@ -179,10 +182,11 @@ class Game:
 
     def _draw_frozen_world(self):
         """ The paused round, darkened, behind a menu """
-        if self._frozen_frame is None:
+        if not self._frozen_valid:
             self._draw_world()
             self.screen.blit(self.overlay, (0, 0))
-            self._frozen_frame = self.screen.copy()
+            self._frozen_frame.blit(self.screen, (0, 0))
+            self._frozen_valid = True
         else:
             self.screen.blit(self._frozen_frame, (0, 0))
 
@@ -207,6 +211,7 @@ class Game:
         warmup.work(self.WARMUP_WORK_MS)
 
     def _step_playing(self, events):
+        self._round_frames += 1
         self.player.detect_key_pressed()
         for event in events:
             if event.type == QUIT:
@@ -223,7 +228,8 @@ class Game:
             elif event.type == KEYUP and event.key == K_F3:
                 GameSettings.show_fps = not GameSettings.show_fps
                 GameSettings.save()
-            elif event.type == KEYUP and event.key == K_ESCAPE:
+            elif event.type == KEYUP and event.key in (K_ESCAPE, K_p):
+                # P too: in a browser Esc first leaves the full screen
                 self.pause()
             # --------------- Window Events ---------------
             # Pause when the window (or the browser tab) goes to the background
@@ -239,6 +245,7 @@ class Game:
         G_Enemys.update()
         G_Bomb.update()
         G_Effects.update()
+        G_Texts.update()
         self.background.update()
         ScreenShake.update()
         self.scoreboard.update()
@@ -276,7 +283,7 @@ class Game:
             elif event.type == EVENT_CLOSE_SETTINGS:
                 self.state = self._settings_return_state
                 # Show the new settings (e.g. the FPS counter) on the frozen game
-                self._frozen_frame = None
+                self._frozen_valid = False
 
         if self._settings_return_state == GameState.INTRO:
             self.background.update()
@@ -317,6 +324,7 @@ class Game:
         G_Players.draw(self.screen)
         G_Supplies.draw(self.screen)
         G_Effects.draw(self.screen)
+        G_Texts.draw(self.screen)
         if TestMode.show_hitboxes:
             for group, color, ratio in self.HITBOXES:
                 for sprite in group:
@@ -358,16 +366,22 @@ class Game:
 
     def _show_result(self, state: GameState):
         self.state = state
-        self._frozen_frame = None
+        self._frozen_valid = False
         self._stop_player_input()
         pygame.mixer.music.fadeout(1500)
+        score = self.player.score
         # Test mode scores do not count
-        if not TestMode.enabled:
-            self.best_score = max(self.best_score, self.player.score)
+        new_best = not TestMode.enabled and score > GameSettings.best_score
+        if new_best:
+            GameSettings.best_score = score
+            GameSettings.save()
         self.ui_result.show(
             is_victory=state == GameState.VICTORY,
-            score=self.player.score,
-            best_score=self.best_score)
+            score=score,
+            best_score=GameSettings.best_score,
+            new_best=new_best,
+            seconds=self._round_frames // 60,
+            kills=self.player.kills)
 
     def _stop_player_input(self):
         """ Release every held control so the player does not keep moving """
@@ -394,7 +408,7 @@ class Game:
         ScreenShake.reset()
 
         # Kill every sprite so it also leaves the per-class groups (e.g. EnemyScout.GROUP)
-        for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Enemys,
+        for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Texts, G_Enemys,
                       G_Player_Bullets, G_Supplies, G_Player1, G_Players]:
             for sprite in group.sprites():
                 sprite.kill()
@@ -428,6 +442,7 @@ class Game:
             TestMode.show_hitboxes = True
             self.apply_god_mode()
         self.state = GameState.PLAYING
+        self._round_frames = 0
         self.level.start()
 
     def _round_paused(self) -> bool:
@@ -450,7 +465,7 @@ class Game:
 
     def pause(self):
         self.state = GameState.PAUSED
-        self._frozen_frame = None
+        self._frozen_valid = False
         self._stop_player_input()
         self.ui_pause.reset()
         # Pause the music and every sound effect channel
@@ -468,6 +483,7 @@ class Game:
         if TestMode.enabled:
             self.apply_god_mode()
         self.state = GameState.PLAYING
+        self._round_frames = 0
         self.level.start()
         pygame.mixer.music.unpause()
 

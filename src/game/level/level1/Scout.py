@@ -15,6 +15,9 @@ class EnemyScout(EnemyI):
 
     DESTROY_SOUND = "SCOUT_DESTROY"
 
+    # Ramming a Scout hurts (half the health) instead of destroying the plane at once
+    COLLIDE_DAMAGE = 50
+
     # At most this many Scouts at a time
     MAX_NUMBER = 25
 

@@ -6,7 +6,7 @@ import random
 import pygame
 from pygame import Vector2
 from pygame.sprite import spritecollideany
-from pygame.locals import *
+from pygame.locals import KEYDOWN, KEYUP
 
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 
@@ -17,7 +17,7 @@ from src.util.inertial import accelerate, decelerate
 from src.helper.sound import play_sound
 
 from src.game.groups import G_Enemys, G_Enemy_Bullets, G_Players
-from src.game.animation import AnimeSprite, ScreenShake, Explosion
+from src.game.animation import AnimeSprite, ScreenShake, Explosion, FloatingText
 from src.game.animation.Effect import AttachEffect
 from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB
 from .player_control import PLAYER1_CONTROL, PLAYER2_CONTROL
@@ -32,8 +32,6 @@ class PlayerPlane(AnimeSprite):
 
     LIFE_MAX = 5
     LIFE_DEFAULT = 3
-
-    LEVEL_MAX = 3
 
     MAX_SPEED_X = 8
     MAX_SPEED_UP = 10
@@ -81,6 +79,8 @@ class PlayerPlane(AnimeSprite):
         self._weapon = weapon
 
         self._score = 0
+        # Enemies destroyed by this player
+        self.kills = 0
         self._life = self.LIFE_DEFAULT
         self._bomb_count = self.BOMB_COUNT_DEFAULT
         self._level = 1
@@ -88,7 +88,6 @@ class PlayerPlane(AnimeSprite):
         self._speed = pygame.Vector2(0, 0)
         self._health = self.MAX_HEALTH
 
-        self._attack_speed = 20
         self._count_attack_interval = 0
         self._count_invincible = 0
         self._count_shake_cooldown = 0
@@ -249,7 +248,7 @@ class PlayerPlane(AnimeSprite):
             if self._count_attack_interval == 0:
                 play_sound("PLAYER_SHOOT")
                 self._weapon.shoot(pos=Pos(self.rect.center))
-                self._count_attack_interval = self._attack_speed
+                self._count_attack_interval = self._weapon.fire_interval
 
     def collide_enemy(self, enemy_group):
         enemy = spritecollideany(self, enemy_group, collide_detect(0.5))
@@ -261,7 +260,7 @@ class PlayerPlane(AnimeSprite):
                 self.hit(enemy.COLLIDE_DAMAGE)
             enemy.collide_player()
             if not enemy.is_active:
-                self._score += enemy.score
+                self.credit_kill(enemy)
 
     def collide_enemy_bullet(self, enemy_bullet_group):
         bullet = spritecollideany(
@@ -399,8 +398,9 @@ class PlayerPlane(AnimeSprite):
     def level(self) -> int:
         return self.weapon.level
 
-    def level_up(self) -> None:
-        self.weapon.level_up()
+    def level_up(self) -> bool:
+        """ :return: False if the weapon was already at its highest level """
+        return self.weapon.level_up()
 
     def level_down(self) -> None:
         self.weapon.level_down()
@@ -413,16 +413,14 @@ class PlayerPlane(AnimeSprite):
     def score(self) -> int:
         return self._score
 
-    def add_score(self, score) -> int:
+    def add_score(self, score) -> None:
         self._score += score
 
-    # ----- Attack Speed
-    @property
-    def attack_speed(self) -> int:
-        return self._attack_speed
-
-    def set_attack_speed(self, attack_speed) -> None:
-        self._attack_speed = attack_speed
+    def credit_kill(self, enemy) -> None:
+        """ Points for an enemy destroyed by this player, shown where it was """
+        self._score += enemy.score
+        self.kills += 1
+        FloatingText(enemy.rect.center, f"{enemy.score:,}")
 
     # ----- Position
     @property
@@ -495,43 +493,49 @@ class PlayerPlane(AnimeSprite):
 
     # ----------------- Event -----------------
 
+    @staticmethod
+    def _held(key_pressed, keys) -> bool:
+        return any(key_pressed[key] for key in keys)
+
     def detect_key_pressed(self):
         # If Key Pressed
         key_pressed = pygame.key.get_pressed()
+        control = self.controller
         # Vertical and horizontal axes are checked separately to allow diagonal movement
-        if key_pressed[self.controller.MOVE_UP.value]:
+        if self._held(key_pressed, control.MOVE_UP):
             self.trigger_move_up()
-        elif key_pressed[self.controller.MOVE_DOWN.value]:
+        elif self._held(key_pressed, control.MOVE_DOWN):
             self.trigger_move_back()
-        if key_pressed[self.controller.MOVE_LEFT.value]:
+        if self._held(key_pressed, control.MOVE_LEFT):
             self.trigger_move_left()
-        elif key_pressed[self.controller.MOVE_RIGHT.value]:
+        elif self._held(key_pressed, control.MOVE_RIGHT):
             self.trigger_move_right()
         # Keep shooting while the key is held (attack() limits the fire rate).
         # Polled here because pygame.time.set_timer is not available on WASM
-        if key_pressed[self.controller.SHOOT.value]:
+        if self._held(key_pressed, control.SHOOT):
             pygame.event.post(pygame.event.Event(
                 EVENT_PLAYER_SHOOT, {"player": self, "id": self.id}))
 
     def handle_event(self, e):
+        control = self.controller
         if e.type == KEYDOWN:
-            # Space Button, shooting is handled in detect_key_pressed()
-            if e.key == self.controller.SHOOT.value:
-                pass
-            else:
-                return False
-
-            return True
+            # Shooting is handled in detect_key_pressed()
+            return e.key in control.SHOOT
         # --------------- Key Up Events ---------------
         elif e.type == KEYUP:
-            if e.key in [self.controller.MOVE_UP.value, self.controller.MOVE_DOWN.value]:
-                self.trigger_stop_y()
-            elif e.key in [self.controller.MOVE_LEFT.value, self.controller.MOVE_RIGHT.value]:
-                self.trigger_stop_x()
-            elif e.key == self.controller.BOMB.value:
+            vertical = control.MOVE_UP + control.MOVE_DOWN
+            horizontal = control.MOVE_LEFT + control.MOVE_RIGHT
+            if e.key in vertical:
+                # Two keys can move the same way (WASD and arrows): stop when none is held
+                if not self._held(pygame.key.get_pressed(), vertical):
+                    self.trigger_stop_y()
+            elif e.key in horizontal:
+                if not self._held(pygame.key.get_pressed(), horizontal):
+                    self.trigger_stop_x()
+            elif e.key in control.BOMB:
                 pygame.event.post(pygame.event.Event(
                     EVENT_PLAYER_BOMB, {"player": self, "id": self.id}))
-            elif e.key == self.controller.SHOOT.value:
+            elif e.key in control.SHOOT:
                 pass
             else:
                 return False
