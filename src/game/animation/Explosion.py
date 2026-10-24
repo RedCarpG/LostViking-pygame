@@ -49,10 +49,15 @@ _variants = {}
 
 
 def prepare() -> None:
-    """ Make the fireballs ahead of time (see warmup) """
+    """ Make the fireballs and their turned / flipped variants ahead of time (see warmup):
+    a variant made on its first use cost a few milliseconds in the middle of a fight
+    """
     for name in SIZES:
         if name not in _frames:
             warmup.add(_build(name))
+        for index in range(1, 8):
+            if (name, index) not in _variants:
+                warmup.add(lambda name=name, index=index: _variant(name, index))
 
 
 def _get_frames(name):

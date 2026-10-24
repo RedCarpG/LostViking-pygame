@@ -95,6 +95,9 @@ class Game:
         # Dark layer drawn over the frozen game behind menus
         self.overlay = pygame.Surface(SCREEN_SIZE, SRCALPHA)
         self.overlay.fill((4, 6, 16, 190))
+        # The frozen game with the dark layer, made once when a menu opens over the round
+        # (drawing the whole world and blending the layer every frame is slow on the web)
+        self._frozen_frame = None
 
         # Level
         self.level = Level1()
@@ -163,17 +166,25 @@ class Game:
         elif self.state == GameState.SETTINGS:
             if self._settings_return_state == GameState.INTRO:
                 self.background.draw(self.screen)
+                self.screen.blit(self.overlay, (0, 0))
             else:
-                self._draw_world()
-            self.screen.blit(self.overlay, (0, 0))
+                self._draw_frozen_world()
             self.ui_settings.blit()
         else:
-            self._draw_world()
-            self.screen.blit(self.overlay, (0, 0))
+            self._draw_frozen_world()
             if self.state == GameState.PAUSED:
                 self.ui_pause.blit()
             else:
                 self.ui_result.blit()
+
+    def _draw_frozen_world(self):
+        """ The paused round, darkened, behind a menu """
+        if self._frozen_frame is None:
+            self._draw_world()
+            self.screen.blit(self.overlay, (0, 0))
+            self._frozen_frame = self.screen.copy()
+        else:
+            self.screen.blit(self._frozen_frame, (0, 0))
 
     # ------------------ States ------------------
 
@@ -264,6 +275,8 @@ class Game:
                 pass
             elif event.type == EVENT_CLOSE_SETTINGS:
                 self.state = self._settings_return_state
+                # Show the new settings (e.g. the FPS counter) on the frozen game
+                self._frozen_frame = None
 
         if self._settings_return_state == GameState.INTRO:
             self.background.update()
@@ -345,6 +358,7 @@ class Game:
 
     def _show_result(self, state: GameState):
         self.state = state
+        self._frozen_frame = None
         self._stop_player_input()
         pygame.mixer.music.fadeout(1500)
         # Test mode scores do not count
@@ -436,6 +450,7 @@ class Game:
 
     def pause(self):
         self.state = GameState.PAUSED
+        self._frozen_frame = None
         self._stop_player_input()
         self.ui_pause.reset()
         # Pause the music and every sound effect channel

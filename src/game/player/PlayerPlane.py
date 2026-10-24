@@ -92,6 +92,7 @@ class PlayerPlane(AnimeSprite):
         self._count_attack_interval = 0
         self._count_invincible = 0
         self._count_shake_cooldown = 0
+        self._hit_effect = None
 
         ''' States '''
         self.state = None
@@ -206,14 +207,17 @@ class PlayerPlane(AnimeSprite):
             # Take damage
             self._health -= damage
             if self._health > 0:
-                # Get Hit effect
-                AttachEffect(
-                    self,
-                    frames={
-                        "IDLE": self.frames["HIT"]
-                    },
-                    frame_size=self.frame_size
-                )
+                # Get Hit effect (restarted by continuous damage, e.g. a laser)
+                if self._hit_effect is not None and self._hit_effect.alive():
+                    self._hit_effect.set_anime_state("IDLE")
+                else:
+                    self._hit_effect = AttachEffect(
+                        self,
+                        frames={
+                            "IDLE": self.frames["HIT"]
+                        },
+                        frame_size=self.frame_size
+                    )
                 if self._count_shake_cooldown == 0:
                     ScreenShake.add(self.SHAKE_HIT * min(1.0, damage / self.SHAKE_FULL_DAMAGE))
                     self._count_shake_cooldown = self.SHAKE_HIT_COOLDOWN

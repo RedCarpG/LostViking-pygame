@@ -64,6 +64,7 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self._count_flash = 0
         self._normal_image = None
         self._flash_image = None
+        self._hit_effect = None
 
     # --------------- Super Methods Override --------------- #
 
@@ -110,15 +111,19 @@ class EnemyI(AnimeSprite, BasicEnemy):
         """ Take damage on the health, destroyed when it reaches 0 """
         self._health -= damage
         if self._health > 0:
-            # Get Hit effect
-            AttachEffect(
-                self,
-                frames={
-                    "IDLE": self.frames["HIT"]
-                },
-                frame_size=self.frame_size,
-                angle=self.angle
-            )
+            # Get Hit effect (restarted by the next hits: stacking copies of a big ship
+            # sheet cost a lot of drawing and looked no different)
+            if self._hit_effect is not None and self._hit_effect.alive():
+                self._hit_effect.set_anime_state("IDLE")
+            else:
+                self._hit_effect = AttachEffect(
+                    self,
+                    frames={
+                        "IDLE": self.frames["HIT"]
+                    },
+                    frame_size=self.frame_size,
+                    angle=self.angle
+                )
             self.hit_feedback()
         else:
             # HP below 0
