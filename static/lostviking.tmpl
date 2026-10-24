@@ -514,5 +514,18 @@ frameborder="1"
 
     </script>
 
+    <script type="application/javascript">
+    // Lost Viking: no sound while the page is in the background, even when the game
+    // loop is not running (the game also pauses its own audio when it can)
+    function lostviking_audio(on) {
+        const ctx = window.Module && Module.SDL2 && Module.SDL2.audioContext
+        if (!ctx) return
+        if (on) ctx.resume(); else ctx.suspend()
+    }
+    window.addEventListener("blur", () => lostviking_audio(false))
+    window.addEventListener("focus", () => lostviking_audio(true))
+    document.addEventListener("visibilitychange", () => lostviking_audio(!document.hidden))
+    </script>
+
 </body>
 </html>

@@ -35,6 +35,10 @@ class Game:
     # Frames to wait after the round ends before showing the result screen
     END_DELAY = 120
 
+    # Window (or browser tab) going to the background and coming back
+    FOCUS_LOST_EVENTS = [WINDOWFOCUSLOST, WINDOWHIDDEN, WINDOWMINIMIZED]
+    FOCUS_GAINED_EVENTS = [WINDOWFOCUSGAINED, WINDOWSHOWN, WINDOWRESTORED]
+
     # Game logic update interval, and the most updates run for one drawn frame
     UPDATE_MS = 1000 / 60
     MAX_UPDATES = 4
@@ -125,6 +129,11 @@ class Game:
     def step(self, draw=True):
         """ Run one update of the current state, and draw it unless `draw` is False """
         events = pygame.event.get()
+        for event in events:
+            if event.type in self.FOCUS_LOST_EVENTS:
+                self._on_focus_lost()
+            elif event.type in self.FOCUS_GAINED_EVENTS:
+                self._on_focus_gained()
         if self.state == GameState.INTRO:
             self._step_intro(events)
         elif self.state == GameState.PLAYING:
@@ -393,6 +402,24 @@ class Game:
             self.apply_god_mode()
         self.state = GameState.PLAYING
         self.level.start()
+
+    def _round_paused(self) -> bool:
+        """ True on the pause menu, or in the settings opened from it """
+        return self.state == GameState.PAUSED or (
+            self.state == GameState.SETTINGS and self._settings_return_state == GameState.PAUSED)
+
+    def _on_focus_lost(self):
+        """ No sound while the game is in the background, on any screen
+        (during a round the playing state also opens the pause menu)
+        """
+        pygame.mixer.music.pause()
+        pygame.mixer.pause()
+
+    def _on_focus_gained(self):
+        # A paused round stays silent until RESUME
+        if not self._round_paused():
+            pygame.mixer.music.unpause()
+            pygame.mixer.unpause()
 
     def pause(self):
         self.state = GameState.PAUSED
