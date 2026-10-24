@@ -10,6 +10,8 @@ def load_asset_player():
     from src.helper.image import load_image
     load_image("PlayerPlane/bullet.png")
     load_image("PlayerPlane/Bomb.png")
+    # Preloaded: decoding this big sheet during the explosion froze the game
+    load_image("Bomb/NucExplosion.png")
     load_image("PlayerPlane/BulletHit.png")
 
     load_image("PlayerPlane/VikingBase.png")

@@ -19,7 +19,8 @@ class UIBoss:
         self.state = UIState.Hidden
 
         # Main Surface
-        self.ui_boss = get_image("UI/Boss/MidTop.png")
+        # Copy: the health bar is drawn onto it
+        self.ui_boss = get_image("UI/Boss/MidTop.png").copy()
         self.ui_boss_rect = self.ui_boss.get_rect(
             midtop=(SCREEN_WIDTH/2, -100))
 

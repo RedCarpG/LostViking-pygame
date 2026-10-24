@@ -21,7 +21,8 @@ class UIPlayer:
         self.state = UIState.Entry
 
         # Main Surface
-        self.ui_player = get_image("UI/Player/BottomLeft.png")
+        # Copy: lives, health bar and portrait are drawn onto it
+        self.ui_player = get_image("UI/Player/BottomLeft.png").copy()
         self.ui_player_rect = self.ui_player.get_rect(
             top=SCREEN_HEIGHT, left=0)
 

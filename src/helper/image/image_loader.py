@@ -100,6 +100,11 @@ def get_image(label: str, **kwargs: ImageType) -> pygame.surface.Surface:
     _alpha = kwargs.get("alpha", None)
 
     image = _IMAGE[label]
+    if not kwargs:
+        # Already converted when loaded: share it instead of copying it on every call
+        # (copying the big sprite sheets froze the game for a moment, mostly on the web).
+        # Code that draws onto an image must copy it first
+        return image
 
     # Convert the Surface for better performance(convert_alpha() if with transparent pixels)
     image = image.convert_alpha() if _transparency else image.convert()

@@ -35,6 +35,12 @@ class Game:
     # Frames to wait after the round ends before showing the result screen
     END_DELAY = 120
 
+    # Game logic update interval, and the most updates run for one drawn frame
+    UPDATE_MS = 1000 / 60
+    MAX_UPDATES = 4
+    # Delay that is caught up over the next frames, a longer freeze is skipped
+    MAX_LAG_MS = 250
+
     # Test mode hitboxes: (group, color, collision ratio used against player bullets / enemy bullets)
     HITBOXES = [
         (G_Enemys, (255, 80, 80), 0.8),
@@ -95,14 +101,29 @@ class Game:
     # ------------------ Main loop ------------------
 
     async def run(self):
+        """ The game logic runs 60 times per second of real time. When a frame was slow
+        (e.g. the browser stalled), the missed updates are run without drawing them,
+        so the game keeps its speed and the controls stay responsive
+        """
+        lag = 0.0
+        last = pygame.time.get_ticks()
         while self.running:
-            self.step()
+            now = pygame.time.get_ticks()
+            lag += now - last
+            last = now
+            updates = max(1, min(self.MAX_UPDATES, round(lag / self.UPDATE_MS)))
+            lag = max(-self.UPDATE_MS, lag - updates * self.UPDATE_MS)
+            if lag > self.MAX_LAG_MS:
+                # Too far behind (a long freeze, e.g. the tab was hidden): do not catch up
+                lag = 0.0
+            for i in range(updates):
+                self.step(draw=i == updates - 1)
             self.clock.tick(60)
             # Give control back to the browser each frame (required by pygbag)
             await asyncio.sleep(0)
 
-    def step(self):
-        """ Run one frame of the current state """
+    def step(self, draw=True):
+        """ Run one update of the current state, and draw it unless `draw` is False """
         events = pygame.event.get()
         if self.state == GameState.INTRO:
             self._step_intro(events)
@@ -114,7 +135,29 @@ class Game:
             self._step_settings(events)
         else:
             self._step_result(events)
-        pygame.display.flip()
+        if draw:
+            self._draw()
+            pygame.display.flip()
+
+    def _draw(self):
+        if self.state == GameState.INTRO:
+            self._draw_intro()
+        elif self.state == GameState.PLAYING:
+            self._draw_world()
+        elif self.state == GameState.SETTINGS:
+            if self._settings_return_state == GameState.INTRO:
+                self.background.draw(self.screen)
+            else:
+                self._draw_world()
+            self.screen.blit(self.overlay, (0, 0))
+            self.ui_settings.blit()
+        else:
+            self._draw_world()
+            self.screen.blit(self.overlay, (0, 0))
+            if self.state == GameState.PAUSED:
+                self.ui_pause.blit()
+            else:
+                self.ui_result.blit()
 
     # ------------------ States ------------------
 
@@ -133,7 +176,6 @@ class Game:
 
         G_Players.update()
         self.background.update()
-        self._draw_intro()
 
     def _step_playing(self, events):
         self.player.detect_key_pressed()
@@ -177,7 +219,6 @@ class Game:
         update_supply_timer()
 
         self._check_round_end()
-        self._draw_world()
 
     def _step_paused(self, events):
         for event in events:
@@ -196,10 +237,6 @@ class Game:
                 self.to_main_menu()
                 break
 
-        self._draw_world()
-        self.screen.blit(self.overlay, (0, 0))
-        self.ui_pause.blit()
-
     def _step_settings(self, events):
         for event in events:
             if event.type == QUIT:
@@ -211,11 +248,6 @@ class Game:
 
         if self._settings_return_state == GameState.INTRO:
             self.background.update()
-            self.background.draw(self.screen)
-        else:
-            self._draw_world()
-        self.screen.blit(self.overlay, (0, 0))
-        self.ui_settings.blit()
 
     def _step_result(self, events):
         for event in events:
@@ -229,10 +261,6 @@ class Game:
             elif event.type == EVENT_MAIN_MENU:
                 self.to_main_menu()
                 break
-
-        self._draw_world()
-        self.screen.blit(self.overlay, (0, 0))
-        self.ui_result.blit()
 
     # ------------------ Helpers ------------------
 

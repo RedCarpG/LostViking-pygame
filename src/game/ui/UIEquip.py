@@ -20,7 +20,8 @@ class UIEquip:
         self.state = UIState.Entry
 
         # Main Surface
-        self.ui_equip = get_image("UI/Equip/Left.png")
+        # Copy: icons and texts are drawn onto it
+        self.ui_equip = get_image("UI/Equip/Left.png").copy()
         self.ui_equip_rect = self.ui_equip.get_rect(
             bottom=SCREEN_HEIGHT-87, right=0)
 
