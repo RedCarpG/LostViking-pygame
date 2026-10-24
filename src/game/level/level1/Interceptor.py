@@ -25,6 +25,8 @@ class EnemyInterceptor(EnemyIII):
     # Bumping into one hurts (same as its laser) instead of destroying the player
     COLLIDE_DAMAGE = 35
 
+    HITBOX = (20, 20)
+
     MOVE_RAD = 300
 
     MOVE_BOTTOM_LIMIT = int(SCREEN_HEIGHT * 3 / 4)

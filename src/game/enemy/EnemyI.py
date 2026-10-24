@@ -34,6 +34,10 @@ class EnemyI(AnimeSprite, BasicEnemy):
     # Damage dealt to the player when they collide, None destroys the player
     COLLIDE_DAMAGE = None
 
+    # Fixed (width, height) collision box, for sprites that rotate: the rect of a
+    # rotated image grows with the angle. None uses the rect (see collide_detect)
+    HITBOX = None
+
     # Hit feedback: frames of white flash and pixels pushed back per hit
     FLASH_DURATION = 3
     KNOCKBACK = 2
@@ -183,6 +187,14 @@ class EnemyI(AnimeSprite, BasicEnemy):
     @property
     def pos(self) -> tuple:
         return self.rect.center
+
+    @property
+    def hitbox(self):
+        if self.HITBOX is None:
+            return None
+        box = pygame.Rect(0, 0, *self.HITBOX)
+        box.center = self.rect.center
+        return box
 
     def set_pos(self, point: Pos) -> None:
         self._pos = Vector2(point.to_list())

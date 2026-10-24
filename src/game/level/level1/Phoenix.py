@@ -26,6 +26,9 @@ class EnemyPhoenix(EnemyII):
 
     KNOCKBACK = 1
 
+    # Body and wing roots, the same at every angle
+    HITBOX = (60, 60)
+
     def __init__(self, pos, is_left):
         super().__init__(
             pos=pos,

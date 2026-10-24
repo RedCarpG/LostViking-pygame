@@ -19,6 +19,7 @@ from src.game.animation import ScreenShake
 from src.game.GameSettings import GameSettings
 from src.game.TestMode import TestMode
 from src.util.type import Pos
+from src.util.collide_detect import hit_rect
 
 
 class GameState(Enum):
@@ -34,12 +35,13 @@ class Game:
     # Frames to wait after the round ends before showing the result screen
     END_DELAY = 120
 
-    HITBOX_COLORS = [
-        (G_Enemys, (255, 80, 80)),
-        (G_Enemy_Bullets, (255, 170, 60)),
-        (G_Players, (80, 230, 120)),
-        (G_Player_Bullets, (90, 200, 255)),
-        (G_Supplies, (240, 220, 80)),
+    # Test mode hitboxes: (group, color, collision ratio used against player bullets / enemy bullets)
+    HITBOXES = [
+        (G_Enemys, (255, 80, 80), 0.8),
+        (G_Enemy_Bullets, (255, 170, 60), 0.6),
+        (G_Players, (80, 230, 120), 0.6),
+        (G_Player_Bullets, (90, 200, 255), 0.8),
+        (G_Supplies, (240, 220, 80), 1.0),
     ]
 
     def __init__(self) -> None:
@@ -255,9 +257,9 @@ class Game:
         G_Supplies.draw(target)
         G_Effects.draw(target)
         if TestMode.show_hitboxes:
-            for group, color in self.HITBOX_COLORS:
+            for group, color, ratio in self.HITBOXES:
                 for sprite in group:
-                    pygame.draw.rect(target, color, sprite.rect, 1)
+                    pygame.draw.rect(target, color, hit_rect(sprite, ratio), 1)
 
         if shaking:
             self.screen.fill(Background.BASE_COLOR)
@@ -347,7 +349,12 @@ class Game:
         """ Start a round from the main menu """
         TestMode.reset()
         TestMode.enabled = test_mode
-        self.level.auto_spawn = True
+        # Test mode starts with a safe, empty stage: spawn what you want from the panel
+        self.level.auto_spawn = not test_mode
+        if test_mode:
+            TestMode.god_mode = True
+            TestMode.show_hitboxes = True
+            self.apply_god_mode()
         self.state = GameState.PLAYING
         self.level.start()
 
