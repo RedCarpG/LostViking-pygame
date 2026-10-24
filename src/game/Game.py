@@ -17,8 +17,9 @@ from src.game.ui import UI, load_asset_ui, UIIntro, UIPause, UIResult, UISetting
     FPSCounter, Background, TestPanel
 from src.game.supply import load_asset_supply, supply_event_config, update_supply_timer, supply_events_handler
 from src.game.level import Level1
-from src.game.animation import ScreenShake, warmup
+from src.game.animation import ScreenShake, HitStop, ScreenFX, warmup
 from src.game.animation.Explosion import prepare as prepare_explosions
+from src.game.animation.ScreenFX import prepare as prepare_screen_fx
 from src.game.GameSettings import GameSettings
 from src.game.TestMode import TestMode
 from src.util.collide_detect import hit_rect
@@ -80,6 +81,7 @@ class Game:
 
         # Explosions, drawn while the menu is shown (see warmup)
         prepare_explosions()
+        prepare_screen_fx()
 
         # UI
         load_asset_ui()
@@ -211,8 +213,12 @@ class Game:
         warmup.work(self.WARMUP_WORK_MS)
 
     def _step_playing(self, events):
-        self._round_frames += 1
-        self.player.detect_key_pressed()
+        # A hit stop freezes the world for a few frames; the events are still handled
+        # (a key released during the freeze must stop the plane)
+        frozen = HitStop.update()
+        if not frozen:
+            self._round_frames += 1
+            self.player.detect_key_pressed()
         for event in events:
             if event.type == QUIT:
                 self.running = False
@@ -238,6 +244,11 @@ class Game:
             else:
                 supply_events_handler(event)
 
+        # The screen keeps shaking during a hit stop
+        ScreenShake.update()
+        if frozen:
+            return
+
         G_Enemy_Bullets.update()
         G_Player_Bullets.update()
         G_Players.update()
@@ -247,7 +258,8 @@ class Game:
         G_Effects.update()
         G_Texts.update()
         self.background.update()
-        ScreenShake.update()
+        ScreenFX.set_low_health(self.player.is_active and self.player.health <= self.player.LOW_HEALTH)
+        ScreenFX.update()
         self.scoreboard.update()
         if GameSettings.show_fps:
             self.fps_counter.update()
@@ -344,11 +356,13 @@ class Game:
             elif dy < 0:
                 self.screen.fill(Background.BASE_COLOR, (0, SCREEN_HEIGHT + dy, SCREEN_WIDTH, -dy))
 
-        # HUD on top of the sprites, it does not shake
+        # Screen effects and the HUD on top of the sprites, they do not shake
+        ScreenFX.draw(self.screen)
         self.ui.blit()
         self.scoreboard.blit()
         if GameSettings.show_fps:
             self.fps_counter.blit()
+        ScreenFX.draw_overlay(self.screen)
 
     def _check_round_end(self):
         if self._count_end_delay > 0:
@@ -406,6 +420,8 @@ class Game:
         pygame.mixer.stop()
         supply_event_config()
         ScreenShake.reset()
+        HitStop.reset()
+        ScreenFX.reset()
 
         # Kill every sprite so it also leaves the per-class groups (e.g. EnemyScout.GROUP)
         for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Texts, G_Enemys,

@@ -109,6 +109,9 @@ def load_music(filename, volume):
 
     full_path = os.path.join(_sound_dir, filename)
     try:
+        # Stop first: loading while the music fades out waits for the end of the fade
+        # (the game froze for up to 1.5 s on a quick restart after the result screen)
+        _MUSIC.stop()
         _MUSIC.load(full_path)
         log.debug("Music [%s] loaded", filename)
     except pygame.error:

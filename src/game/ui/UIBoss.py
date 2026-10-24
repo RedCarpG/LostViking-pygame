@@ -9,12 +9,16 @@ from .HealthBar import HealthBar
 class UIBoss:
 
     MOVE_SPEED = 2
+    # Health bar colors: normal, and once the boss is enraged (blinking with the second one)
+    BAR_COLOR = (24, 138, 70)
+    ENRAGED_COLORS = ((236, 110, 36), (255, 170, 80))
 
     def __init__(self, surface) -> None:
 
         self.surface = surface
         self.boss_g = G_BOSS
         self.state = UIState.Hidden
+        self._count_blink = 0
 
         # Main Surface
         # Copy: the health bar is drawn onto it
@@ -44,7 +48,13 @@ class UIBoss:
                 self.state = UIState.Exit
                 self.health_bar.max_health = 100
             else:
-                self.health_bar.update(self.boss_g.sprite.health)
+                boss = self.boss_g.sprite
+                self.health_bar.update(boss.health)
+                if getattr(boss, "enraged", False):
+                    self._count_blink += 1
+                    self.health_bar.fill_color = self.ENRAGED_COLORS[(self._count_blink // 20) % 2]
+                else:
+                    self.health_bar.fill_color = self.BAR_COLOR
         elif self.state == UIState.Exit:
             if self.ui_boss_rect.bottom > 0:
                 self.ui_boss_rect.move_ip([0, -self.MOVE_SPEED])

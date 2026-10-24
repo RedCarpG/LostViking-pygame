@@ -16,7 +16,7 @@ class UISettings:
     GLOW = (60, 150, 255)
     IDLE_COLOR = (120, 132, 170)
 
-    ROW_TOP = SCREEN_HEIGHT / 2 - 110
+    ROW_TOP = SCREEN_HEIGHT / 2 - 130
     ROW_SPACING = 64
     LABEL_X = SCREEN_WIDTH / 2 - 250
     VALUE_X = SCREEN_WIDTH / 2 + 50
@@ -29,6 +29,7 @@ class UISettings:
         ("MUSIC", "music_volume", "volume"),
         ("SOUND", "sound_volume", "volume"),
         ("SCREEN SHAKE", "screen_shake", "toggle"),
+        ("SCREEN FLASH", "screen_flash", "toggle"),
         ("SHOW FPS", "show_fps", "toggle"),
         ("BACK", None, "back"),
     ]

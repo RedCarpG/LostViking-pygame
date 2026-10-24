@@ -29,6 +29,7 @@ class EnemyPhoenix(EnemyII):
     HITBOX = (60, 60)
     EXPLOSION = "large"
     DESTROY_SOUND = "PHOENIX_DESTROY"
+    HITSTOP_DESTROY = 3
 
     def __init__(self, pos, is_left):
         super().__init__(

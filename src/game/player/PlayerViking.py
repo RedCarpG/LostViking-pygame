@@ -1,6 +1,6 @@
 import pygame
 
-from src.game.animation.Effect import Effect
+from src.game.animation import Effect, MuzzleFlash
 from src.util.type import Pos, Size
 from src.helper.image import get_image, get_rotated_image
 from .PlayerPlane import PlayerPlane
@@ -36,6 +36,9 @@ class PlayerWeaponViking(PlayerWeapon):
     FIRE_INTERVALS = (20, 20, 20, 16)
 
     SPEED = 17
+    # Guns, from the plane center (x) and top (y): the wing pods, and the wing tips (level 5)
+    GUNS = ((-11, 10), (11, 10))
+    WING_GUNS = ((-23, 13), (23, 13))
 
     def __init__(self, player: PlayerPlane):
         super().__init__(player)
@@ -49,6 +52,8 @@ class PlayerWeaponViking(PlayerWeapon):
         right = pos.move_x(10)
         self._fire(left, 0)
         self._fire(right, 0)
+        for gun in self.GUNS:
+            MuzzleFlash(self.player, gun)
 
         if self._level >= 2:
             self._fire(left, -5, angle=20)
@@ -61,6 +66,8 @@ class PlayerWeaponViking(PlayerWeapon):
         if self._level >= 5:
             self._fire(pos.move([-22, 8]), 0)
             self._fire(pos.move([22, 8]), 0)
+            for gun in self.WING_GUNS:
+                MuzzleFlash(self.player, gun)
 
 
 class PlayerBulletViking(PlayerBullet):

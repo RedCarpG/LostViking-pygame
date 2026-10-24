@@ -1,7 +1,8 @@
 import random
 from pygame import Vector2
 from src.game.enemy import EnemyBoss, EnemyBullet
-from src.game.animation import AttachEffect
+from src.game.animation import AttachEffect, ScreenShake, ScreenFX, FloatingText
+from src.game.animation.FloatingText import WARNING_COLOR
 from src.helper.image import get_image, get_scaled_image
 from src.helper.sound import play_sound
 from src.util.type import Pos
@@ -45,6 +46,10 @@ class EnemyCarrier(EnemyBoss):
     VOLLEY_SPEED = 9
     LASER_SWEEP_SPEED = 1.2
 
+    # Below half health: red flash and shake, its health bar turns orange
+    ENRAGE_FLASH = (255, 70, 40)
+    SHAKE_ENRAGE = 0.6
+
     def __init__(self):
         EnemyBoss.__init__(
             self,
@@ -65,6 +70,7 @@ class EnemyCarrier(EnemyBoss):
         self._volley_left = 0
         self._count_volley = 0
         self.laser = None
+        self._enrage_shown = False
 
     @classmethod
     def prepare_images(cls):
@@ -88,6 +94,9 @@ class EnemyCarrier(EnemyBoss):
     # --------------- Override Methods --------------- #
     def action(self):
         super().action()
+        if self.enraged and not self._enrage_shown:
+            self._enrage_shown = True
+            self._show_enrage()
         # Bullet patterns that last a few frames
         if self._volley_left > 0:
             if self._count_volley > 0:
@@ -176,6 +185,13 @@ class EnemyCarrier(EnemyBoss):
         """ Unit vector from `origin` toward the player """
         direction = Vector2(G_Player1.sprite.rect.center) - origin
         return direction.normalize() if direction.length() > 0 else Vector2(0, 1)
+
+    def _show_enrage(self):
+        """ Tell the player the attacks come faster now """
+        ScreenFX.flash(self.ENRAGE_FLASH, strength=0.35, duration=30)
+        ScreenShake.add(self.SHAKE_ENRAGE)
+        play_sound("CARRIER_ARRIVE")
+        FloatingText(self.emitter, "ENRAGED", WARNING_COLOR, duration=90)
 
     def _attack_interceptors(self):
         def launch():

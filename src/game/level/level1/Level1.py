@@ -5,6 +5,7 @@ from src.setting import MAIN_VOLUME
 from src.helper.sound import load_sounds, load_music, play_music
 from src.helper.image import load_images, get_image
 from src.game.animation.rotsprite import queue as queue_rotations
+from src.game.animation import ScreenFX
 from src.game.groups import G_BOSS, G_Enemys, G_Enemy_Bullets
 from .Scout import EnemyScout
 from .Phoenix import EnemyPhoenix
@@ -46,6 +47,7 @@ SOUNDS = [
 ]
 
 MUSIC = ("music/bgm1.ogg", MAIN_VOLUME - 0.4)
+BOSS_MUSIC = ("music/bgm2.ogg", MAIN_VOLUME - 0.4)
 
 
 class Level1:
@@ -54,6 +56,11 @@ class Level1:
     SPAWN_SPEED_SCOUT_INCREASE = 0.01
     SPAWN_SPEED_PHOENIX = 2000
     SPAWN_SPEED_CARRIER = 8200
+
+    # When the boss comes the level music fades out, and the boss music starts this many frames later
+    MUSIC_FADE_MS = 1200
+    BOSS_MUSIC_DELAY = 75
+    BOSS_MUSIC_FADE_IN_MS = 1500
 
     def __init__(self) -> None:
         self.start_time = 0
@@ -77,6 +84,7 @@ class Level1:
         self._phoenix_created_times = 0
         self._count_create_carrier = 0
         self._carrier_created = False
+        self._count_boss_music = 0
         # Spawn enemies over time, can be turned off in test mode
         self.auto_spawn = True
 
@@ -89,6 +97,7 @@ class Level1:
         self._phoenix_created_times = 0
         self._count_create_carrier = 0
         self._carrier_created = False
+        self._count_boss_music = 0
 
         load_music(*MUSIC)
         play_music()
@@ -104,6 +113,10 @@ class Level1:
             self._count_create_carrier = 0
             self._carrier_created = True
             EnemyCarrier()
+            ScreenFX.boss_warning()
+            if pygame.mixer.get_init():
+                pygame.mixer.music.fadeout(self.MUSIC_FADE_MS)
+            self._count_boss_music = self.BOSS_MUSIC_DELAY
             log.debug('Create Carrier')
 
     def clear_enemies(self):
@@ -113,6 +126,13 @@ class Level1:
         self._carrier_created = False
 
     def update(self):
+        if self._count_boss_music > 0:
+            self._count_boss_music -= 1
+            if self._count_boss_music == 0 and not self.is_completed:
+                # The level music again if the boss is already gone (removed in test mode)
+                load_music(*(BOSS_MUSIC if G_BOSS.sprite is not None else MUSIC))
+                play_music(fade_ms=self.BOSS_MUSIC_FADE_IN_MS)
+
         if self.is_completed or not self.auto_spawn:
             return
 

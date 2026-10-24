@@ -17,7 +17,7 @@ from src.util.inertial import accelerate, decelerate
 from src.helper.sound import play_sound
 
 from src.game.groups import G_Enemys, G_Enemy_Bullets, G_Players
-from src.game.animation import AnimeSprite, ScreenShake, Explosion, FloatingText
+from src.game.animation import AnimeSprite, ScreenShake, HitStop, ScreenFX, Explosion, FloatingText
 from src.game.animation.Effect import AttachEffect
 from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB
 from .player_control import PLAYER1_CONTROL, PLAYER2_CONTROL
@@ -57,6 +57,10 @@ class PlayerPlane(AnimeSprite):
     # only shakes again after a short cooldown
     SHAKE_FULL_DAMAGE = 30
     SHAKE_HIT_COOLDOWN = 12
+    # The screen edges pulse red at this health or below
+    LOW_HEALTH = 30
+    # Frames the world freezes when the plane is destroyed (see HitStop)
+    HITSTOP_DESTROY = 6
 
     def __init__(self, weapon: PlayerWeapon, pos, frames, frame_size, id=1):
         # Init
@@ -172,6 +176,8 @@ class PlayerPlane(AnimeSprite):
         self.set_anime_state("DESTROY")
         play_sound("PLAYER_DESTROY")
         ScreenShake.add(self.SHAKE_DESTROY)
+        HitStop.add(self.HITSTOP_DESTROY)
+        ScreenFX.hurt(1.0)
         Explosion(self.rect.center, "large")
         self._drop_upgrades()
 
@@ -205,6 +211,8 @@ class PlayerPlane(AnimeSprite):
         if not self.is_invincible and self.is_active:
             # Take damage
             self._health -= damage
+            # Red screen edges, stronger for a bigger hit
+            ScreenFX.hurt(min(1.0, 0.25 + damage / 50))
             if self._health > 0:
                 # Get Hit effect (restarted by continuous damage, e.g. a laser)
                 if self._hit_effect is not None and self._hit_effect.alive():

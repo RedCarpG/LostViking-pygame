@@ -5,7 +5,7 @@ from src.util.type import Pos, Size
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.util.inertial import decelerate, accelerate
 from src.game.groups import G_BOSS, G_Player1
-from src.game.animation import Explosion, Spark, ScreenShake
+from src.game.animation import Explosion, Spark, ScreenShake, HitStop, ScreenFX
 from src.helper.sound import play_sound
 from .EnemyI import EnemyI
 
@@ -41,6 +41,10 @@ class EnemyBoss(EnemyI):
     DEATH_DURATION = 120
     DEATH_BLAST_INTERVAL = 8
     SHAKE_DEATH_BLAST = 0.3
+
+    # The last blast: frames the world freezes, white flash strength
+    HITSTOP_FINAL_BLAST = 10
+    FLASH_FINAL_BLAST = 0.6
 
     # Flying into the boss destroys the player, the boss only takes some damage
     COLLIDE_SELF_DAMAGE = 500
@@ -165,4 +169,6 @@ class EnemyBoss(EnemyI):
             Explosion((x + dx, y + dy), "large", delay=i * 4)
         Spark.burst((x, y), 30, 120)
         ScreenShake.add(self.SHAKE_DESTROY)
+        HitStop.add(self.HITSTOP_FINAL_BLAST)
+        ScreenFX.flash(strength=self.FLASH_FINAL_BLAST, duration=45)
         self.set_anime_state("DESTROY")

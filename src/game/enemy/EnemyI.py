@@ -3,7 +3,7 @@ import random
 import pygame
 from pygame import Vector2
 
-from src.game.animation import AnimeSprite, AttachEffect, ScreenShake, Explosion
+from src.game.animation import AnimeSprite, AttachEffect, ScreenShake, HitStop, Explosion
 from src.game.groups import G_Enemys
 from src.util.type import Pos, Size
 from src.helper.sound import play_sound
@@ -40,6 +40,8 @@ class EnemyI(AnimeSprite, BasicEnemy):
     EXPLOSION = "medium"
     # Sound played when destroyed, None: no sound
     DESTROY_SOUND = None
+    # Frames the world freezes when destroyed, for the big ships (see HitStop)
+    HITSTOP_DESTROY = 0
     # Frames of the destroy animation shown under the explosion (the last ones are
     # dark silhouettes)
     DESTROY_FRAMES_SHOWN = 3
@@ -166,6 +168,8 @@ class EnemyI(AnimeSprite, BasicEnemy):
             play_sound(self.DESTROY_SOUND)
         Explosion(self.rect.center, self.EXPLOSION)
         ScreenShake.add(self.SHAKE_DESTROY)
+        if self.HITSTOP_DESTROY:
+            HitStop.add(self.HITSTOP_DESTROY)
         from src.game.supply import drop_supply_event
         if drop_supply and random.random() < self.drop_supply_chance:
             drop_supply_event(Pos(self.pos))

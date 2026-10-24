@@ -10,8 +10,7 @@ from src.helper.image import get_image
 from src.helper.sound import play_sound
 from src.util.type import Pos, Size
 from src.game.groups import G_Bomb
-from src.game.animation.Effect import Effect
-from src.game.animation.ScreenShake import ScreenShake
+from src.game.animation import Effect, ScreenShake, HitStop, ScreenFX
 from src.game.custom_events import EVENT_BOMB_EXPLODE
 
 
@@ -39,6 +38,10 @@ class PlayerNucBomb(Sprite):
             PlayerNucBomb._IS_LAUNCHED = False
             play_sound("BOMB_EXPLODE")
             ScreenShake.add(1.0)
+            # White flash, a shockwave over the whole screen and a short freeze
+            ScreenFX.flash(strength=0.6, duration=40)
+            ScreenFX.ring(self.rect.center, SCREEN_HEIGHT, duration=34)
+            HitStop.add(4)
 
             pygame.event.post(pygame.event.Event(
                 EVENT_BOMB_EXPLODE, {"player": self.player}))

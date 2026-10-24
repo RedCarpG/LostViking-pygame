@@ -33,7 +33,7 @@ Add `--build` to only build `build/web` without starting the test server.
 | Tab | Show / hide equipment panel |
 | F3 | Show / hide FPS |
 
-Volume, screen shake and the FPS counter can be changed in **Settings** (main menu or pause menu).
+Volume, screen shake, screen flashes and the FPS counter can be changed in **Settings** (main menu or pause menu).
 They are saved in `settings.json` (desktop) or the browser storage (web).
 
 ## Test mode
