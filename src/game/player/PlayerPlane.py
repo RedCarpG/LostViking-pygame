@@ -52,6 +52,10 @@ class PlayerPlane(AnimeSprite):
     # Screen shake trauma (see ScreenShake)
     SHAKE_HIT = 0.5
     SHAKE_DESTROY = 0.8
+    # Hits with less damage shake less, and continuous damage (e.g. a laser)
+    # only shakes again after a short cooldown
+    SHAKE_FULL_DAMAGE = 30
+    SHAKE_HIT_COOLDOWN = 12
 
     def __init__(self, weapon: PlayerWeapon, pos, frames, frame_size, id=1):
         # Init
@@ -84,6 +88,7 @@ class PlayerPlane(AnimeSprite):
         self._attack_speed = 20
         self._count_attack_interval = 0
         self._count_invincible = 0
+        self._count_shake_cooldown = 0
 
         ''' States '''
         self.state = None
@@ -102,6 +107,8 @@ class PlayerPlane(AnimeSprite):
         """ Update method from Sprite, is called per frame """
         super().update()
         self._reload()
+        if self._count_shake_cooldown > 0:
+            self._count_shake_cooldown -= 1
         if self.is_active:
             if self.is_invincible:
                 if self._count_invincible > 0:
@@ -177,7 +184,9 @@ class PlayerPlane(AnimeSprite):
                     },
                     frame_size=self.frame_size
                 )
-                ScreenShake.add(self.SHAKE_HIT)
+                if self._count_shake_cooldown == 0:
+                    ScreenShake.add(self.SHAKE_HIT * min(1.0, damage / self.SHAKE_FULL_DAMAGE))
+                    self._count_shake_cooldown = self.SHAKE_HIT_COOLDOWN
             else:
                 # HP below 0
                 self.destroy()

@@ -89,7 +89,12 @@ class PlayerBullet(pygame.sprite.Sprite, ABC):
     def collide_enemy(self, enemy_group):
         enemy = spritecollideany(self, enemy_group, collide_detect(0.8))
         if enemy and enemy.is_active:
-            enemy.hit(self.damage)
+            # A shield absorbs the bullet and shows its own impact effect
+            shielded = getattr(enemy, "shield", 0) > 0
+            enemy.hit(self.damage, hit_pos=self.rect.center)
             if not enemy.is_active:
                 self.player.add_score(enemy.score)
-            self.hit()
+            if shielded:
+                self.kill()
+            else:
+                self.hit()

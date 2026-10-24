@@ -71,7 +71,9 @@ class EnemyPhoenix(EnemyII):
                     self.shield = 0
                     self._break_shield()
                 else:
-                    self.shield_bubble.pulse()
+                    hit_pos = kwargs.get("hit_pos")
+                    self.shield_bubble.pulse(hit_pos)
+                    ShieldImpactEffect(self, hit_pos)
             else:
                 self._health -= damage
                 if self._health > 0:
@@ -160,12 +162,23 @@ class BulletPhoenix(EnemyBullet):
 
 
 class PhoenixShieldBubble(AnimeSprite):
-    """ Shield bubble around a Phoenix: it lights up when hit, gets fainter
-    as the shield drops and turns red when the shield is about to break
+    """ Shield bubble around a Phoenix. On each hit it flashes, swells and springs back,
+    and its edge lights up where the bullet struck. It gets fainter as the shield
+    drops and turns red when the shield is about to break.
     """
 
     LOW_SHIELD = 0.35
-    FADE = 0.9
+    # Distance from the Phoenix center to the bubble edge
+    RADIUS = 58
+
+    FADE = 0.92
+    FLASH_FRAMES = 3
+    POP_SCALE = 0.14
+    POP_FADE = 0.7
+    IMPACT_FADE = 0.85
+
+    IMPACT_COLOR = (225, 250, 255)
+    LOW_IMPACT_COLOR = (255, 170, 160)
 
     # Red tinted copy of the shield sheet, made once
     _LOW_SHEET = None
@@ -183,12 +196,25 @@ class PhoenixShieldBubble(AnimeSprite):
 
         self.phoenix = phoenix
         self._glow = 0.0
+        self._pop = 0.0
+        self._impact = 0.0
+        self._impact_angle = None
+        self._count_flash = 0
         self.rect.center = phoenix.rect.center
         self.image = self._EMPTY
         G_Effects.add(self)
 
-    def pulse(self) -> None:
+    def pulse(self, hit_pos=None) -> None:
+        """ Light the bubble up, hit_pos is where the bullet struck (None: no impact arc) """
         self._glow = 1.0
+        self._pop = 1.0
+        self._count_flash = self.FLASH_FRAMES
+        if hit_pos is not None:
+            dx = hit_pos[0] - self.phoenix.rect.centerx
+            dy = hit_pos[1] - self.phoenix.rect.centery
+            # pygame.draw.arc angles go counterclockwise with y up
+            self._impact_angle = math.atan2(-dy, dx)
+            self._impact = 1.0
 
     def update(self) -> None:
         if not self.phoenix.alive() or not self.phoenix.is_active:
@@ -196,19 +222,108 @@ class PhoenixShieldBubble(AnimeSprite):
             return
         self.anime()
         self._glow *= self.FADE
+        self._pop *= self.POP_FADE
+        self._impact *= self.IMPACT_FADE
 
         ratio = self.phoenix.shield / self.phoenix.MAX_SHIELD
-        alpha = int(255 * self._glow * (0.45 + 0.55 * ratio))
+        alpha = int(255 * self._glow * (0.6 + 0.4 * ratio))
         if alpha < 4:
             self.image = self._EMPTY
             self.rect = self.image.get_rect(center=self.phoenix.rect.center)
             return
 
-        sheet = self._LOW_SHEET if ratio < self.LOW_SHIELD else self._normal_sheet
-        self.image = sheet.subsurface(
+        low = ratio < self.LOW_SHIELD
+        sheet = self._LOW_SHEET if low else self._normal_sheet
+        frame = sheet.subsurface(
             self._chop_rect.move(self._current_frame_index * self._img_w, 0)).copy()
-        self.image.set_alpha(alpha)
+
+        if self._count_flash > 0:
+            # Bright flash right after the hit
+            self._count_flash -= 1
+            frame.fill((160, 160, 160), special_flags=pygame.BLEND_RGB_ADD)
+
+        if self._impact > 0.05 and self._impact_angle is not None:
+            # Light the edge up where the bullet struck
+            color = self.LOW_IMPACT_COLOR if low else self.IMPACT_COLOR
+            edge = frame.get_rect().inflate(-6, -6)
+            for width, spread, strength in [(4, 0.9, 0.55), (9, 0.45, 1.0)]:
+                pygame.draw.arc(frame, (*color, int(255 * self._impact * strength)), edge,
+                                self._impact_angle - spread, self._impact_angle + spread, width)
+
+        scale = 1 + self.POP_SCALE * self._pop
+        if scale > 1.005:
+            # Swell on the hit and spring back
+            frame = pygame.transform.smoothscale(
+                frame, (int(frame.get_width() * scale), int(frame.get_height() * scale)))
+
+        frame.set_alpha(alpha)
+        self.image = frame
         self.rect = self.image.get_rect(center=self.phoenix.rect.center)
+
+
+class ShieldImpactEffect(Sprite):
+    """ Where a bullet hits a shield: a flash, a small ring and sparks
+    bouncing off the shield, so the bullet looks deflected
+    """
+
+    DURATION = 12
+    SIZE = 130
+    COLOR = (150, 230, 255)
+    SPARK_COLOR = (235, 252, 255)
+    SPARKS = 12
+
+    # Soft glow image, made once
+    _GLOW = None
+
+    def __init__(self, phoenix, hit_pos=None) -> None:
+        super().__init__(G_Effects)
+        if ShieldImpactEffect._GLOW is None:
+            glow = pygame.Surface((76, 76), pygame.SRCALPHA)
+            for i in range(38):
+                pygame.draw.circle(glow, (*self.COLOR, int(255 * (i / 38) ** 1.6)), (38, 38), 38 - i)
+            ShieldImpactEffect._GLOW = glow
+
+        center = Vector2(phoenix.rect.center)
+        direction = Vector2(hit_pos) - center if hit_pos is not None else Vector2(random.uniform(-1, 1), 1)
+        if direction.length() == 0:
+            direction = Vector2(0, 1)
+        direction = direction.normalize()
+
+        self.image = pygame.Surface((self.SIZE, self.SIZE), pygame.SRCALPHA)
+        self.rect = self.image.get_rect(center=center + direction * PhoenixShieldBubble.RADIUS)
+        # Sparks fly outwards from the shield surface
+        self._sparks = [[Vector2(0, 0), direction.rotate(random.uniform(-70, 70)) * random.uniform(4, 8.5)]
+                        for _ in range(self.SPARKS)]
+        self._count = 0
+        self._render()
+
+    def update(self) -> None:
+        self._count += 1
+        if self._count >= self.DURATION:
+            self.kill()
+            return
+        for spark in self._sparks:
+            spark[0] += spark[1]
+            spark[1] *= 0.88
+        self._render()
+
+    def _render(self) -> None:
+        t = self._count / self.DURATION
+        alpha = int(255 * (1 - t))
+        center = Vector2(self.SIZE // 2, self.SIZE // 2)
+        self.image.fill((0, 0, 0, 0))
+
+        self._GLOW.set_alpha(int(255 * (1 - t) ** 2))
+        self.image.blit(self._GLOW, self._GLOW.get_rect(center=center))
+
+        # Small quick ring
+        radius = 3 + 14 * (1 - (1 - t) ** 3)
+        ring_alpha = int(255 * (1 - t) ** 1.5)
+        pygame.draw.circle(self.image, (*self.COLOR, ring_alpha), center, int(radius), max(1, int(3 * (1 - t))))
+
+        for position, velocity in self._sparks:
+            start = center + position
+            pygame.draw.line(self.image, (*self.SPARK_COLOR, alpha), start, start - velocity * 2.2, 2)
 
 
 class ShieldBreakEffect(Sprite):

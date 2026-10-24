@@ -91,6 +91,7 @@ class EnemyCarrier(EnemyBoss):
 
 class LaserCarrier(AnimeSprite):
     DURATION = 200
+    HIT_EFFECT_INTERVAL = 4
     DAMAGE = 15
 
     def __init__(self, carrier) -> None:
@@ -104,6 +105,7 @@ class LaserCarrier(AnimeSprite):
         self.carrier = carrier
         self.damage = self.DAMAGE
         self.duration = self.DURATION
+        self._count_hit_effect = 0
         self.rect.midtop = self.carrier.rect.midbottom
 
     def update(self):
@@ -125,7 +127,9 @@ class LaserCarrier(AnimeSprite):
             self.kill()
 
     def hit(self, target=None):
-        if target is not None:
+        # The laser touches every frame: a spark every few frames is enough
+        self._count_hit_effect = (self._count_hit_effect + 1) % self.HIT_EFFECT_INTERVAL
+        if target is not None and self._count_hit_effect == 1:
             Effect(
                 Pos(target.rect.midtop).random_offset(15),
                 frames={

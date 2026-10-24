@@ -91,8 +91,9 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self._pos += self._speed
         self.rect.center = (round(self._pos.x), round(self._pos.y))
 
-    def hit(self, damage=100, target=None) -> None:
+    def hit(self, damage=100, target=None, **kwargs) -> None:
         """ This function is called in collision detection
+        :param kwargs: hit_pos, where the bullet hit (used by shields)
         """
         if self.is_active:
             self._health -= damage

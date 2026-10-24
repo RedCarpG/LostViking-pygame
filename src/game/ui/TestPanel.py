@@ -39,8 +39,10 @@ class TestPanel:
         # Each row: (key, key label, text function, action), a header row has no key
         self.rows = []
         self._build_rows()
-        self._row_rects = []
         self._text_cache = {}
+        self._layout()
+        self._rendered_key = None
+        self._panel = None
 
         self.tag = render_text(get_font("PanelKey"), "TEST MODE  -  PRESS ` TO SHOW THE PANEL",
                                self.TITLE_COLOR, spacing=1, shadow=True)
@@ -129,9 +131,23 @@ class TestPanel:
             self._text_cache[key] = get_font(font_name).render(text, True, color)
         return self._text_cache[key]
 
+    TITLE_HEIGHT = 30
+    HINT_HEIGHT = 26
+
+    def _layout(self):
+        """ Screen rect of every clickable row (the layout never changes) """
+        self._row_rects = []
+        y = self.PADDING + self.TITLE_HEIGHT
+        for key, key_label, text, action in self.rows:
+            if key is not None:
+                self._row_rects.append(
+                    (pygame.Rect(self.LEFT, self.TOP + y, self.WIDTH, self.ROW_HEIGHT), action))
+            y += self.ROW_HEIGHT
+
     def blit(self, target=None, offset=(0, 0)):
         """ Draw the panel on `target` (default: the screen). `offset` is subtracted from
-        its position, so it stays still on screen when drawn on the shaking world surface
+        its position, so it stays still on screen when the world is shaking.
+        The panel image is only rendered again when a value or the hovered row changes.
         """
         target = target or self.surface
         ox, oy = offset
@@ -139,28 +155,32 @@ class TestPanel:
             target.blit(self.tag, self.tag.get_rect(topright=(SCREEN_WIDTH - 10 - ox, 62 - oy)))
             return
 
-        title_height = 30
-        hint_height = 26
-        height = self.PADDING * 2 + title_height + len(self.rows) * self.ROW_HEIGHT + hint_height
+        texts = tuple(text() for key, key_label, text, action in self.rows)
+        mouse = pygame.mouse.get_pos()
+        hover = next((i for i, (rect, action) in enumerate(self._row_rects) if rect.collidepoint(mouse)), None)
+        if (texts, hover) != self._rendered_key:
+            self._rendered_key = (texts, hover)
+            self._panel = self._render(texts, hover)
+        target.blit(self._panel, (self.LEFT - ox, self.TOP - oy))
+
+    def _render(self, texts, hover):
+        height = self.PADDING * 2 + self.TITLE_HEIGHT + len(self.rows) * self.ROW_HEIGHT + self.HINT_HEIGHT
         panel = pygame.Surface((self.WIDTH, height), pygame.SRCALPHA)
         panel.fill(self.BACK_COLOR)
         pygame.draw.rect(panel, self.BORDER_COLOR, panel.get_rect(), 1)
 
         panel.blit(self._text("MenuText", "TEST PANEL", self.TITLE_COLOR), (self.PADDING, self.PADDING - 4))
-        mouse = pygame.mouse.get_pos()
-        self._row_rects = []
-        y = self.PADDING + title_height
-        for key, key_label, text, action in self.rows:
-            label, value = text()
+        y = self.PADDING + self.TITLE_HEIGHT
+        entry = 0
+        for (key, key_label, text, action), (label, value) in zip(self.rows, texts):
             middle = y + self.ROW_HEIGHT // 2
             if key is None:
                 header = self._text("PanelKey", label, self.HEADER_COLOR)
                 panel.blit(header, header.get_rect(midleft=(self.PADDING, middle + 2)))
             else:
-                screen_rect = pygame.Rect(self.LEFT, self.TOP + y, self.WIDTH, self.ROW_HEIGHT)
-                self._row_rects.append((screen_rect, action))
-                if screen_rect.collidepoint(mouse):
+                if entry == hover:
                     panel.fill(self.HOVER_COLOR, (1, y, self.WIDTH - 2, self.ROW_HEIGHT))
+                entry += 1
                 # Key badge
                 badge = pygame.Rect(self.PADDING, middle - 9, 22, 18)
                 pygame.draw.rect(panel, self.HEADER_COLOR, badge, 1, border_radius=3)
@@ -178,5 +198,5 @@ class TestPanel:
             y += self.ROW_HEIGHT
 
         hint = self._text("PanelHint", "Press the key or click a row", self.HEADER_COLOR)
-        panel.blit(hint, hint.get_rect(midleft=(self.PADDING, y + hint_height // 2 + 2)))
-        target.blit(panel, (self.LEFT - ox, self.TOP - oy))
+        panel.blit(hint, hint.get_rect(midleft=(self.PADDING, y + self.HINT_HEIGHT // 2 + 2)))
+        return panel

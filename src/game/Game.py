@@ -75,8 +75,6 @@ class Game:
         self.fps_counter = FPSCounter(
             self.screen, self.clock, [SCREEN_WIDTH-100, 30])
         self.background = Background()
-        # The world is drawn here instead of the screen while it shakes
-        self.world_surface = pygame.Surface(SCREEN_SIZE).convert()
         # Dark layer drawn over the frozen game behind menus
         self.overlay = pygame.Surface(SCREEN_SIZE, SRCALPHA)
         self.overlay.fill((4, 6, 16, 190))
@@ -244,30 +242,38 @@ class Game:
         G_Players.draw(self.screen)
 
     def _draw_world(self):
-        # Only draw off screen while shaking, so a still frame costs no extra blit
-        shaking = ScreenShake.is_shaking()
-        target = self.world_surface if shaking else self.screen
+        offset = ScreenShake.offset
 
-        self.background.draw(target)
-        # Test panel behind the sprites so it never hides them; on the shaking surface it is
-        # drawn against the shake offset so it stays still on screen
+        self.background.draw(self.screen)
+        # Test panel behind the sprites so it never hides them. It is drawn against the
+        # shake offset: the world is scrolled afterwards, so the panel ends up still
         if TestMode.enabled:
-            self.test_panel.blit(target, ScreenShake.offset if shaking else (0, 0))
-        G_Bomb.draw(target)
-        G_Enemy_Bullets.draw(target)
-        G_Player_Bullets.draw(target)
-        G_Enemys.draw(target)
-        G_Players.draw(target)
-        G_Supplies.draw(target)
-        G_Effects.draw(target)
+            self.test_panel.blit(self.screen, offset)
+        G_Bomb.draw(self.screen)
+        G_Enemy_Bullets.draw(self.screen)
+        G_Player_Bullets.draw(self.screen)
+        G_Enemys.draw(self.screen)
+        G_Players.draw(self.screen)
+        G_Supplies.draw(self.screen)
+        G_Effects.draw(self.screen)
         if TestMode.show_hitboxes:
             for group, color, ratio in self.HITBOXES:
                 for sprite in group:
-                    pygame.draw.rect(target, color, hit_rect(sprite, ratio), 1)
+                    pygame.draw.rect(self.screen, color, hit_rect(sprite, ratio), 1)
 
-        if shaking:
-            self.screen.fill(Background.BASE_COLOR)
-            self.screen.blit(self.world_surface, ScreenShake.offset)
+        if offset != (0, 0):
+            # Shake: move the drawn world in place (cheaper than drawing it on another
+            # surface and copying it), then fill the strips it uncovered
+            dx, dy = offset
+            self.screen.scroll(dx, dy)
+            if dx > 0:
+                self.screen.fill(Background.BASE_COLOR, (0, 0, dx, SCREEN_HEIGHT))
+            elif dx < 0:
+                self.screen.fill(Background.BASE_COLOR, (SCREEN_WIDTH + dx, 0, -dx, SCREEN_HEIGHT))
+            if dy > 0:
+                self.screen.fill(Background.BASE_COLOR, (0, 0, SCREEN_WIDTH, dy))
+            elif dy < 0:
+                self.screen.fill(Background.BASE_COLOR, (0, SCREEN_HEIGHT + dy, SCREEN_WIDTH, -dy))
 
         # HUD on top of the sprites, it does not shake
         self.ui.blit()
