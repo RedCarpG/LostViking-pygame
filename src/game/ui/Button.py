@@ -66,3 +66,72 @@ class Button:
 
     def blit(self):
         self.surface.blit(self.image, self.rect)
+
+
+class Menu:
+    """ Vertical list of text buttons, chosen with W/S or the arrow keys and
+    confirmed with Enter or Space
+    """
+
+    def __init__(self, surface, items: list, center_x, top, spacing=60, key_event=pygame.KEYUP):
+        """
+        :param items: list of (label, function) for each button, the function is called when clicked
+        :param key_event: pygame.KEYUP or pygame.KEYDOWN, the key event that controls the menu
+        """
+        self.key_event = key_event
+        self.buttons = []
+        for i, (label, function) in enumerate(items):
+            self.buttons.append(Button(
+                surface,
+                function=lambda button, function=function: function(),
+                frames=text_button_frames(label),
+                center=Pos([center_x, top + i * spacing])
+            ))
+        self.chosen = 0
+        self.reset()
+
+    def reset(self):
+        self.chosen = 0
+        for each in self.buttons:
+            each.toggle_choose(False)
+        self.buttons[0].toggle_choose(True)
+
+    def _choose(self, index):
+        self.buttons[self.chosen].toggle_choose(False)
+        self.chosen = index
+        self.buttons[self.chosen].toggle_choose(True)
+
+    def _button_at(self, pos):
+        for i, each in enumerate(self.buttons):
+            if each.rect.collidepoint(pos):
+                return i
+        return None
+
+    def handle_event(self, event) -> bool:
+        # Mouse: hovering chooses a button, a left click activates it
+        if event.type == pygame.MOUSEMOTION:
+            index = self._button_at(event.pos)
+            if index is not None and index != self.chosen:
+                self._choose(index)
+            return index is not None
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            index = self._button_at(event.pos)
+            if index is None:
+                return False
+            self._choose(index)
+            self.buttons[index].clicked()
+            return True
+        if event.type != self.key_event:
+            return False
+        if event.key in [pygame.K_s, pygame.K_DOWN, pygame.K_w, pygame.K_UP]:
+            step = 1 if event.key in [pygame.K_s, pygame.K_DOWN] else -1
+            self._choose((self.chosen + step) % len(self.buttons))
+        elif event.key in [pygame.K_RETURN, pygame.K_SPACE]:
+            self.buttons[self.chosen].clicked()
+        else:
+            return False
+        return True
+
+    def blit(self):
+        for each in self.buttons:
+            each.blit()

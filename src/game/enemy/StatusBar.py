@@ -1,6 +1,7 @@
 import pygame
 from pygame.sprite import Sprite
 from src.game.groups import G_Effects
+from src.game.TestMode import TestMode
 
 
 class EnemyStatusBar(Sprite):
@@ -26,7 +27,9 @@ class EnemyStatusBar(Sprite):
         self._drawn_values = None
 
     def show(self) -> None:
-        self._count_show = self.SHOW_DURATION
+        # Only a test mode tool, hidden in the normal game
+        if TestMode.enabled:
+            self._count_show = self.SHOW_DURATION
 
     def update(self) -> None:
         if not self.owner.alive() or not self.owner.is_active:

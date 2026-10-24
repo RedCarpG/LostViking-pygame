@@ -45,6 +45,11 @@ class _SoundBuffer(object):
 _SOUND = _SoundBuffer()
 _MUSIC = pygame.mixer.music
 
+# Volumes given when loading, scaled by the player's volume settings
+_sound_base_volume = {}
+_music_base_volume = 0.0
+_volume_scale = {"sound": 1.0, "music": 1.0}
+
 
 def play_sound(label):
     """ Play sound from _SOUND dictionary which is previously loaded
@@ -84,7 +89,8 @@ def load_sound(filename, volume, label):
             f'<ERROR> !!! Can not find audio file : {full_path}')
         raise SystemExit(str(pygame.get_error()))
 
-    sound.set_volume(volume)
+    _sound_base_volume[label] = volume
+    sound.set_volume(min(1.0, volume * _volume_scale["sound"]))
     _SOUND[label] = sound
 
 
@@ -130,8 +136,25 @@ def load_music(filename, volume):
             logging.error('<ERROR> !!! Can not find audio file in: [{}]'.format(
                 full_path))
             raise SystemExit(str(pygame.get_error()))
-    _MUSIC.set_volume(volume)
+    global _music_base_volume
+    _music_base_volume = volume
+    _MUSIC.set_volume(min(1.0, volume * _volume_scale["music"]))
 
 
 def play_music():
     _MUSIC.play(loops=-1)
+
+
+def set_sound_volume_scale(scale):
+    """ Scale every sound effect volume (1.0 keeps the volume given when loading) """
+    _volume_scale["sound"] = scale
+    for label, sound in _SOUND.BUFFER.items():
+        if label in _sound_base_volume:
+            sound.set_volume(min(1.0, _sound_base_volume[label] * scale))
+
+
+def set_music_volume_scale(scale):
+    """ Scale the music volume (1.0 keeps the volume given when loading) """
+    _volume_scale["music"] = scale
+    if pygame.mixer.get_init():
+        _MUSIC.set_volume(min(1.0, _music_base_volume * scale))

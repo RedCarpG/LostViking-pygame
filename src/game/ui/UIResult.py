@@ -1,10 +1,10 @@
 import pygame
 from pygame.locals import *
 from src.helper.font import load_font, get_font, render_text
-from src.util.type import Pos
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
-from src.game.custom_events import EVENT_RESTART
-from .Button import Button, text_button_frames
+from src.game.custom_events import EVENT_RESTART, EVENT_MAIN_MENU
+from .Button import Menu
+from .UIPause import post_event
 
 
 class UIResult:
@@ -25,29 +25,16 @@ class UIResult:
         self.score_text = None
         self.best_text = None
 
-        def restart_game(button):
-            pygame.event.post(pygame.event.Event(EVENT_RESTART))
-        self.button_restart = Button(
-            self.surface,
-            function=restart_game,
-            frames=text_button_frames("RESTART"),
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 70])
-        )
-
-        def end_game(button):
-            pygame.event.post(pygame.event.Event(pygame.QUIT))
-        self.button_exit = Button(
-            self.surface,
-            function=end_game,
-            frames=text_button_frames("EXIT"),
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 140])
-        )
-
-        self.buttons = [self.button_restart]
+        items = [
+            ("RESTART", post_event(EVENT_RESTART)),
+            ("MAIN MENU", post_event(EVENT_MAIN_MENU)),
+        ]
         # A browser page can not be closed by the game
         if not IS_WEB:
-            self.buttons.append(self.button_exit)
-        self.button_choosed = 0
+            items.append(("EXIT", post_event(pygame.QUIT)))
+        # Use KEYDOWN so releasing a key held during the game (e.g. shoot) does not click a button
+        self.menu = Menu(self.surface, items, SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 70,
+                         key_event=pygame.KEYDOWN)
 
     def show(self, is_victory: bool, score: int, best_score: int):
         if is_victory:
@@ -66,7 +53,7 @@ class UIResult:
         else:
             self.best_text = render_text(get_font("MenuText"), f"BEST  {best_score:,}",
                                          self.LABEL_COLOR, spacing=4)
-        self._reset_chosen()
+        self.menu.reset()
 
     def blit(self):
         center_x = SCREEN_WIDTH / 2
@@ -78,28 +65,7 @@ class UIResult:
             center=(center_x, SCREEN_HEIGHT / 2 - 80)))
         self.surface.blit(self.best_text, self.best_text.get_rect(
             center=(center_x, SCREEN_HEIGHT / 2 - 25)))
-        for each in self.buttons:
-            each.blit()
+        self.menu.blit()
 
     def handle_event(self, event):
-        # Use KEYDOWN so releasing a key held during the game (e.g. shoot) does not click a button
-        if event.type == pygame.KEYDOWN:
-            if event.key in [K_s, K_DOWN, K_w, K_UP]:
-                self.buttons[self.button_choosed].toggle_choose()
-                self.button_choosed = (
-                    self.button_choosed + 1) % len(self.buttons)
-                self.buttons[self.button_choosed].toggle_choose()
-            elif event.key in [K_RETURN, K_SPACE]:
-                self.buttons[self.button_choosed].clicked()
-            else:
-                return False
-
-            return True
-
-        return False
-
-    def _reset_chosen(self):
-        self.button_choosed = 0
-        for each in self.buttons:
-            each.toggle_choose(False)
-        self.buttons[0].toggle_choose(True)
+        return self.menu.handle_event(event)

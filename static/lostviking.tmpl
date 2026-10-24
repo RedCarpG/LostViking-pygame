@@ -300,11 +300,21 @@ function show_infobox() {
             right: 0;
         }
 
+        /* Lost Viking: no focus frame around the game, it needs focus for the keyboard */
+        canvas.emscripten:focus,
+        canvas.emscripten:focus-visible {
+            outline: none;
+        }
+
         body {
             font-family: arial;
             margin: 0;
             padding: none;
             background-color: #05060f;
+            /* Lost Viking: clicking or dragging must not select anything on the page */
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .topright{

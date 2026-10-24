@@ -1,10 +1,14 @@
 import pygame
 from pygame.locals import *
 from src.helper.font import get_font, render_text
-from src.util.type import Pos
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
-from src.game.custom_events import EVENT_RESUME, EVENT_RESTART
-from .Button import Button, text_button_frames
+from src.game.custom_events import EVENT_RESUME, EVENT_RESTART, EVENT_OPEN_SETTINGS, EVENT_MAIN_MENU
+from .Button import Menu
+
+
+def post_event(event_type):
+    """ Return a function posting a pygame event, used as a menu button action """
+    return lambda: pygame.event.post(pygame.event.Event(event_type))
 
 
 class UIPause:
@@ -15,78 +19,28 @@ class UIPause:
         self.pause_text = render_text(get_font("MenuTitle"), "PAUSED", COLOR.WHITE,
                                       spacing=10, glow_color=(60, 150, 255), glow_size=10)
         self.pause_rect = self.pause_text.get_rect(
-            center=(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 120))
+            center=(SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 150))
 
-        def resume_game(button):
-            pygame.event.post(pygame.event.Event(EVENT_RESUME))
-
-        self.button_resume = Button(
-            self.surface,
-            function=resume_game,
-            frames=text_button_frames("RESUME"),
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 10])
-        )
-        self.button_resume.toggle_choose()
-
-        def restart_game(button):
-            pygame.event.post(pygame.event.Event(EVENT_RESTART))
-        self.button_restart = Button(
-            self.surface,
-            function=restart_game,
-            frames=text_button_frames("RESTART"),
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 60])
-        )
-
-        def end_game(button):
-            pygame.event.post(pygame.event.Event(pygame.QUIT))
-        self.button_exit = Button(
-            self.surface,
-            function=end_game,
-            frames=text_button_frames("EXIT"),
-            center=Pos([SCREEN_WIDTH/2, SCREEN_HEIGHT/2 + 130])
-        )
-
-        self.buttons = []
-        self.buttons.append(self.button_resume)
-        self.buttons.append(self.button_restart)
+        items = [
+            ("RESUME", post_event(EVENT_RESUME)),
+            ("RESTART", post_event(EVENT_RESTART)),
+            ("SETTINGS", post_event(EVENT_OPEN_SETTINGS)),
+            ("MAIN MENU", post_event(EVENT_MAIN_MENU)),
+        ]
         # A browser page can not be closed by the game
         if not IS_WEB:
-            self.buttons.append(self.button_exit)
-
-        self.button_choosed = 0
+            items.append(("EXIT", post_event(pygame.QUIT)))
+        self.menu = Menu(self.surface, items, SCREEN_WIDTH/2, SCREEN_HEIGHT/2 - 40)
 
     def blit(self):
-        for each in self.buttons:
-            each.blit()
+        self.menu.blit()
         self.surface.blit(self.pause_text, self.pause_rect)
 
     def handle_event(self, event):
-
-        if event.type == pygame.KEYUP:
-            if event.key in [K_s, K_DOWN]:
-                self.buttons[self.button_choosed].toggle_choose()
-                self.button_choosed = (
-                    self.button_choosed + 1) % len(self.buttons)
-                self.buttons[self.button_choosed].toggle_choose()
-            elif event.key in [K_w, K_UP]:
-                self.buttons[self.button_choosed].toggle_choose()
-                self.button_choosed = (
-                    self.button_choosed - 1) % len(self.buttons)
-                self.buttons[self.button_choosed].toggle_choose()
-            elif event.key in [K_RETURN, K_SPACE]:
-                self.buttons[self.button_choosed].clicked()
-                self._reset_chosen()
-            elif event.key == K_ESCAPE:
-                pygame.event.post(pygame.event.Event(EVENT_RESUME))
-            else:
-                return False
-
+        if event.type == pygame.KEYUP and event.key == K_ESCAPE:
+            pygame.event.post(pygame.event.Event(EVENT_RESUME))
             return True
+        return self.menu.handle_event(event)
 
-        return False
-
-    def _reset_chosen(self):
-        self.button_choosed = 0
-        for each in self.buttons:
-            each.toggle_choose(False)
-        self.buttons[0].toggle_choose(True)
+    def reset(self):
+        self.menu.reset()

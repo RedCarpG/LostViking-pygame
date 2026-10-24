@@ -17,7 +17,7 @@ class COLOR:
 
 # 主音量
 MAIN_VOLUME = 0.5
-# 屏幕震动 (受击、爆炸时)
+# 屏幕震动的默认值 (受击、爆炸时), 玩家可在设置里修改
 SCREEN_SHAKE = True
 # 背景卷动速度
 BG_SPEED = 25

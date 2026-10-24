@@ -1,5 +1,5 @@
 import random
-from src.setting import SCREEN_SHAKE
+from src.game.GameSettings import GameSettings
 
 
 class ScreenShake:
@@ -16,7 +16,7 @@ class ScreenShake:
 
     @classmethod
     def add(cls, trauma: float) -> None:
-        if SCREEN_SHAKE:
+        if GameSettings.screen_shake:
             cls._trauma = min(1.0, cls._trauma + trauma)
 
     @classmethod

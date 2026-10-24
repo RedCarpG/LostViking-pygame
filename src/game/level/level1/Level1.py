@@ -6,7 +6,7 @@ from src.setting import MAIN_VOLUME
 from src.helper.sound.sound_loader import load_sound, play_music
 from src.helper.image import load_image, del_image
 from src.helper.sound import load_music
-from src.game.groups import G_BOSS
+from src.game.groups import G_BOSS, G_Enemys, G_Enemy_Bullets
 from .Scout import EnemyScout
 from .Phoenix import EnemyPhoenix
 from .Carrier import EnemyCarrier
@@ -85,6 +85,8 @@ class Level1:
         self._phoenix_created_times = 0
         self._count_create_carrier = 0
         self._carrier_created = False
+        # Spawn enemies over time, can be turned off in test mode
+        self.auto_spawn = True
 
     def start(self):
         self.start_time = pygame.time.get_ticks()
@@ -104,8 +106,22 @@ class Level1:
         """ The level is completed once the Carrier has appeared and been destroyed """
         return self._carrier_created and G_BOSS.sprite is None
 
+    def spawn_carrier(self):
+        """ Bring in the boss now (the level then waits for it to be destroyed) """
+        if G_BOSS.sprite is None:
+            self._count_create_carrier = 0
+            self._carrier_created = True
+            EnemyCarrier()
+            logging.info('Create Carrier')
+
+    def clear_enemies(self):
+        """ Remove every enemy and enemy bullet (test mode), a removed boss does not count as a victory """
+        for sprite in G_Enemys.sprites() + G_Enemy_Bullets.sprites():
+            sprite.kill()
+        self._carrier_created = False
+
     def update(self):
-        if self.is_completed:
+        if self.is_completed or not self.auto_spawn:
             return
 
         self._count_create_phoenix += 1
@@ -131,10 +147,7 @@ class Level1:
                         side=random.choice(["left", "right"]))
                 logging.info('Create Phoenix')
             if self._count_create_carrier > self.SPAWN_SPEED_CARRIER:
-                self._count_create_carrier = 0
-                self._carrier_created = True
-                EnemyCarrier()
-                logging.info('Create Carrier')
+                self.spawn_carrier()
         else:
             if self._count_create_phoenix > self.spwan_speed_phoenix * 1.5:
                 self._count_create_phoenix = 0

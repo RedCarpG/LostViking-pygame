@@ -8,3 +8,5 @@ from .Button import Button
 from .UIPause import UIPause
 from .UIIntro import UIIntro
 from .UIResult import UIResult
+from .UISettings import UISettings
+from .TestPanel import TestPanel

@@ -32,3 +32,13 @@ Add `--build` to only build `build/web` without starting the test server.
 | Esc | Pause |
 | Tab | Show / hide equipment panel |
 | F3 | Show / hide FPS |
+
+Volume, screen shake and the FPS counter can be changed in **Settings** (main menu or pause menu).
+They are saved in `settings.json` (desktop) or the browser storage (web).
+
+## Test mode
+
+Choose **Test Mode** in the main menu to play with a test panel (press `` ` `` to show / hide it).
+Each action has a key and can also be clicked: spawn any enemy or the boss, damage the boss,
+level up the weapon, add bombs and lives, god mode, turn automatic spawning off and show hitboxes.
+Test mode scores do not count as best score.
