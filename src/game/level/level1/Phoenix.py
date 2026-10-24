@@ -112,7 +112,7 @@ class BulletPhoenix(EnemyBullet):
             pos,
             speed=Vector2([0, self.SPEED]),
             damage=self.DAMAGE,
-            image=get_image("Enemy/Laser.png")
+            image=get_image("Enemy/laser.png")
         )
         self._rotate(angle)
 

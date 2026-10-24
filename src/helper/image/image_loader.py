@@ -32,6 +32,9 @@ class _ImageBuffer(object):
     def __delitem__(self, key):
         del self.BUFFER[key]
 
+    def pop(self, key, default=None):
+        return self.BUFFER.pop(key, default)
+
 
 _IMAGE = _ImageBuffer()
 
@@ -54,7 +57,7 @@ def load_image(filename: str, **kwargs: ImageType) -> pygame.surface.Surface:
     :return pygame.surface.Surface object
     """
     if not get_init():
-        raise("<ERROR> Pygame display not init.")
+        raise RuntimeError("<ERROR> Pygame display not init.")
     fullname = os.path.join(_image_dir, filename)
     _transparency = kwargs.get("transparency", True)
     _scale = kwargs.get("scale", None)
@@ -65,8 +68,7 @@ def load_image(filename: str, **kwargs: ImageType) -> pygame.surface.Surface:
         image = pygame.image.load(fullname)
         logging.info("<SUCCESS> Image [{}] loaded !".format(filename))
     except pygame.error:
-        logging.error("<ERROR> Image [{}] not found".format(
-            filename), file=sys.stderr)
+        logging.error("<ERROR> Image [{}] not found".format(filename))
         raise SystemExit(str(pygame.get_error()))
 
     # Convert the Surface for better performance(convert_alpha() if with transparent pixels)
@@ -84,8 +86,8 @@ def load_image(filename: str, **kwargs: ImageType) -> pygame.surface.Surface:
     if _scale:
         # Scale image
         image = pygame.transform.scale(image,
-                                       [int(image.get_height() * _scale[0]),
-                                        int(image.get_width() * _scale[1])])
+                                       [int(image.get_width() * _scale[0]),
+                                        int(image.get_height() * _scale[1])])
 
     _IMAGE[filename] = image
     return image
@@ -114,8 +116,8 @@ def get_image(label: str, **kwargs: ImageType) -> pygame.surface.Surface:
     if _scale:
         # Scale image
         image = pygame.transform.smoothscale(image,
-                                             (int(image.get_height() * _scale[0]),
-                                              int(image.get_width() * _scale[1])))
+                                             (int(image.get_width() * _scale[0]),
+                                              int(image.get_height() * _scale[1])))
 
     return image
 

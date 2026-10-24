@@ -29,6 +29,7 @@ class EnemyScout(EnemyI):
                 "ATTACK": get_image("Enemy/Scout/ScoutAttack.png")
             },
             frame_size=None)
+        self.GROUP.add(self)
 
     # --------------- Create function --------------- #
 

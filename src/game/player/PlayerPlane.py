@@ -15,7 +15,7 @@ from src.util.inertial import accelerate, decelerate
 
 from src.helper.sound import play_sound
 
-from src.game.groups import G_Enemys, G_Enemy_Bullets
+from src.game.groups import G_Enemys, G_Enemy_Bullets, G_Players
 from src.game.animation import AnimeSprite
 from src.game.animation.Effect import AttachEffect
 from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB
@@ -85,6 +85,8 @@ class PlayerPlane(AnimeSprite):
         self.state = None
         self.is_invincible = False
         self.is_active = True
+        # Set when the last life is lost and the destroy animation has finished
+        self.is_dead = False
         self._is_moving_x = False
         self._is_moving_y = False
 
@@ -107,8 +109,13 @@ class PlayerPlane(AnimeSprite):
             self.collide_enemy_bullet(G_Enemy_Bullets)
 
     def anime_end_loop_hook(self):
-        if not self.is_active:
-            self.reset()
+        if not self.is_active and not self.is_dead:
+            if self._life > 0:
+                self.reset()
+            else:
+                # No life left: hide the plane, the game will show the result screen
+                self.is_dead = True
+                self.remove(G_Players)
 
     # --------------------- Behaviors ---------------------
 
@@ -447,11 +454,12 @@ class PlayerPlane(AnimeSprite):
     def detect_key_pressed(self):
         # If Key Pressed
         key_pressed = pygame.key.get_pressed()
+        # Vertical and horizontal axes are checked separately to allow diagonal movement
         if key_pressed[self.controller.MOVE_UP.value]:
             self.trigger_move_up()
         elif key_pressed[self.controller.MOVE_DOWN.value]:
             self.trigger_move_back()
-        elif key_pressed[self.controller.MOVE_LEFT.value]:
+        if key_pressed[self.controller.MOVE_LEFT.value]:
             self.trigger_move_left()
         elif key_pressed[self.controller.MOVE_RIGHT.value]:
             self.trigger_move_right()

@@ -26,7 +26,7 @@ class UIPlayer:
             top=SCREEN_HEIGHT, left=0)
 
         # Health Bar
-        self.health_bar_img = get_image("UI/Player/Healthbar.png")
+        self.health_bar_img = get_image("UI/Player/HealthBar.png")
         self.health_bar_img_rect = self.health_bar_img.get_rect().move(12, 58)
         self.health_bar = HealthBar(
             self.ui_player, pygame.Rect(15, 61, 215, 20), 100)

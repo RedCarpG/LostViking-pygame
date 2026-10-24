@@ -1,3 +1,4 @@
+from enum import Enum
 from pygame.locals import *
 import pygame
 from .custom_events import EVENT_RESTART, EVENT_RESUME, EVENT_START
@@ -15,7 +16,18 @@ from src.game.level import *
 from src.util.type import Pos
 
 
+class GameState(Enum):
+    INTRO = 0
+    PLAYING = 1
+    PAUSED = 2
+    GAME_OVER = 3
+    VICTORY = 4
+
+
 class Game:
+    # Frames to wait after the round ends before showing the result screen
+    END_DELAY = 120
+
     def __init__(self) -> None:
         self.screen = pygame.display.set_mode(SCREEN_SIZE)
         self.clock = pygame.time.Clock()
@@ -26,9 +38,8 @@ class Game:
 
         # Player
         load_asset_player()
-        self.player = PlayerViking(pos=None)
-        G_Player1.add(self.player)
-        G_Players.add(self.player)
+        self.player = None
+        self._create_player()
 
         # Supply
         load_asset_supply()
@@ -36,137 +47,197 @@ class Game:
         # UI
         load_asset_ui()
         self.ui = UI(self.screen)
+        self.ui_intro = UIIntro(self.screen)
         self.ui_pause = UIPause(self.screen)
+        self.ui_result = UIResult(self.screen)
         self.scoreboard = Scoreboard(self.screen)
         self.fps_counter = FPSCounter(
             self.screen, self.clock, [SCREEN_WIDTH-100, 30])
-
-        self.level = None
-
-    def event(self):
-
-        self.player.detect_key_pressed()
-        for event in pygame.event.get():
-
-            # if self.pause
-
-            if self.player.handle_event(event):
-                pass
-            elif detect_custom_event(event):
-                self.ui.handle_event(event)
-
-            elif event.type == QUIT:
-                self.running = False
-            # --------------- Key Down Events ---------------
-            elif event.type == KEYUP:
-                if event.key == K_TAB:
-                    self.ui.toggle_hidden()
-                elif event.key == K_ESCAPE:
-                    self.paused()
-            else:
-                supply_events_handler(event)
-
-    def run(self):
-
-        self.intro()
+        # Dark layer drawn over the frozen game behind menus
+        self.overlay = pygame.Surface(SCREEN_SIZE, SRCALPHA)
+        self.overlay.fill((0, 0, 0, 160))
 
         # Level
         self.level = Level1()
-        self.level.start()
 
-        while self.running:
-            self.event()
-
-            G_Enemy_Bullets.update()
-            G_Player_Bullets.update()
-            G_Players.update()
-            G_Supplies.update()
-            G_Enemys.update()
-            G_Bomb.update()
-            G_Effects.update()
-            self.scoreboard.update()
-            self.fps_counter.update()
-            self.ui.update()
-            self.level.update()
-
-            self.screen.fill(COLOR.BLACK)
-            self.scoreboard.blit()
-            self.fps_counter.blit()
-            G_Bomb.draw(self.screen)
-            G_Enemy_Bullets.draw(self.screen)
-            G_Player_Bullets.draw(self.screen)
-            G_Enemys.draw(self.screen)
-            G_Players.draw(self.screen)
-            G_Supplies.draw(self.screen)
-            G_Effects.draw(self.screen)
-            self.ui.blit()
-            # Display
-            pygame.display.flip()
-
-            self.clock.tick(60)
-
-    def paused(self):
-        self.pause = True
-        while self.pause:
-            for event in pygame.event.get():
-
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-                elif self.ui_pause.handle_event(event):
-                    pass
-                elif event.type == EVENT_RESUME:
-                    self.pause = False
-                elif event.type == EVENT_RESTART:
-                    self.restart()
-                    self.pause = False
-                    break
-
-            self.ui_pause.blit()
-            pygame.display.update()
-
-    def intro(self):
-
-        intro = True
+        self.state = GameState.INTRO
+        self.best_score = 0
+        self._count_end_delay = 0
+        self._end_state = None
 
         load_music("music/bgm.ogg", MAIN_VOLUME - 0.4)
         play_music()
 
-        ui_intro = UIIntro(self.screen)
-        while intro:
-            for event in pygame.event.get():
+    # ------------------ Main loop ------------------
 
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-                elif ui_intro.handle_event(event):
-                    pass
-                elif event.type == EVENT_START:
-                    intro = False
-
-            G_Players.update()
-
-            ui_intro.blit()
-
-            self.screen.fill(COLOR.BLACK, self.player.rect)
-            G_Players.draw(self.screen)
-            pygame.display.update(self.player.rect)
-
+    def run(self):
+        while self.running:
+            self.step()
             self.clock.tick(60)
 
-    def restart(self):
+    def step(self):
+        """ Run one frame of the current state """
+        events = pygame.event.get()
+        if self.state == GameState.INTRO:
+            self._step_intro(events)
+        elif self.state == GameState.PLAYING:
+            self._step_playing(events)
+        elif self.state == GameState.PAUSED:
+            self._step_paused(events)
+        else:
+            self._step_result(events)
+        pygame.display.flip()
 
-        G_BOSS.empty()
-        G_Enemy_Bullets.empty()
-        G_Bomb.empty()
-        G_Effects.empty()
-        G_Enemys.empty()
-        G_Player_Bullets.empty()
-        G_Supplies.empty()
-        G_Player1.empty()
-        G_Players.empty()
+    # ------------------ States ------------------
+
+    def _step_intro(self, events):
+        for event in events:
+            if event.type == QUIT:
+                self.running = False
+            elif self.ui_intro.handle_event(event):
+                pass
+            elif event.type == EVENT_START:
+                self.state = GameState.PLAYING
+                self.level.start()
+
+        G_Players.update()
+
+        self.screen.fill(COLOR.BLACK)
+        self.ui_intro.blit()
+        G_Players.draw(self.screen)
+
+    def _step_playing(self, events):
+        self.player.detect_key_pressed()
+        for event in events:
+            if event.type == QUIT:
+                self.running = False
+            elif self.player.handle_event(event):
+                pass
+            elif detect_custom_event(event):
+                self.ui.handle_event(event)
+            # --------------- Key Up Events ---------------
+            elif event.type == KEYUP and event.key == K_TAB:
+                self.ui.toggle_hidden()
+            elif event.type == KEYUP and event.key == K_ESCAPE:
+                self.pause()
+            else:
+                supply_events_handler(event)
+
+        G_Enemy_Bullets.update()
+        G_Player_Bullets.update()
+        G_Players.update()
+        G_Supplies.update()
+        G_Enemys.update()
+        G_Bomb.update()
+        G_Effects.update()
+        self.scoreboard.update()
+        self.fps_counter.update()
+        self.ui.update()
+        self.level.update()
+
+        self._check_round_end()
+        self._draw_world()
+
+    def _step_paused(self, events):
+        for event in events:
+            if event.type == QUIT:
+                self.running = False
+            elif self.ui_pause.handle_event(event):
+                pass
+            elif event.type == EVENT_RESUME:
+                self.state = GameState.PLAYING
+            elif event.type == EVENT_RESTART:
+                self.restart()
+                break
+
+        self._draw_world()
+        self.screen.blit(self.overlay, (0, 0))
+        self.ui_pause.blit()
+
+    def _step_result(self, events):
+        for event in events:
+            if event.type == QUIT:
+                self.running = False
+            elif self.ui_result.handle_event(event):
+                pass
+            elif event.type == EVENT_RESTART:
+                self.restart()
+                break
+
+        self._draw_world()
+        self.screen.blit(self.overlay, (0, 0))
+        self.ui_result.blit()
+
+    # ------------------ Helpers ------------------
+
+    def _draw_world(self):
+        self.screen.fill(COLOR.BLACK)
+        self.scoreboard.blit()
+        self.fps_counter.blit()
+        G_Bomb.draw(self.screen)
+        G_Enemy_Bullets.draw(self.screen)
+        G_Player_Bullets.draw(self.screen)
+        G_Enemys.draw(self.screen)
+        G_Players.draw(self.screen)
+        G_Supplies.draw(self.screen)
+        G_Effects.draw(self.screen)
+        self.ui.blit()
+
+    def _check_round_end(self):
+        if self._count_end_delay > 0:
+            self._count_end_delay -= 1
+            if self._count_end_delay == 0:
+                self._show_result(self._end_state)
+        elif self.player.is_dead:
+            self._end_state = GameState.GAME_OVER
+            self._count_end_delay = self.END_DELAY
+        elif self.level.is_completed:
+            # Keep the player safe from leftover bullets while the boss explodes
+            self.player.invincible(continuous=True)
+            self._end_state = GameState.VICTORY
+            self._count_end_delay = self.END_DELAY
+
+    def _show_result(self, state: GameState):
+        self.state = state
+        self._stop_player_input()
+        pygame.mixer.music.fadeout(1500)
+        self.best_score = max(self.best_score, self.player.score)
+        self.ui_result.show(
+            is_victory=state == GameState.VICTORY,
+            score=self.player.score,
+            best_score=self.best_score)
+
+    def _stop_player_input(self):
+        """ Release every held control so the player does not keep moving or shooting """
+        stop_player_shoot()
+        self.player.trigger_stop_x()
+        self.player.trigger_stop_y()
+
+    def _create_player(self):
         self.player = PlayerViking(pos=None)
         G_Player1.add(self.player)
         G_Players.add(self.player)
 
+    def pause(self):
+        self.state = GameState.PAUSED
+        self._stop_player_input()
+
+    def restart(self):
+        self._stop_player_input()
+        reset_player_events()
+
+        # Kill every sprite so it also leaves the per-class groups (e.g. EnemyScout.GROUP)
+        for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Enemys,
+                      G_Player_Bullets, G_Supplies, G_Player1, G_Players]:
+            for sprite in group.sprites():
+                sprite.kill()
+        pygame.event.clear()
+
+        self._create_player()
+        self.ui = UI(self.screen)
+        self.scoreboard = Scoreboard(self.screen)
+
+        self._count_end_delay = 0
+        self._end_state = None
+        self.state = GameState.PLAYING
         self.level.start()

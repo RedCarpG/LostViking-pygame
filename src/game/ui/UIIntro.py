@@ -22,18 +22,13 @@ class UIIntro:
                                      ("Press any key to start"), color=COLOR.WHITE)
         self.intro_text.move_center((SCREEN_WIDTH/2, SCREEN_HEIGHT/5 * 3))
 
-        self.title_text.blit()
-        pygame.display.update(self.title_text.rect)
-
         self.count_flash = 0
 
     def blit(self):
-        self.surface.fill(COLOR.BLACK, self.intro_text.rect)
+        self.title_text.blit()
         if self.count_flash < 50:
             self.intro_text.blit()
         self.count_flash = (self.count_flash + 1) % 100
-
-        pygame.display.update(self.intro_text.rect)
 
     def handle_event(self, event):
 

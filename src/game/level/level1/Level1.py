@@ -6,6 +6,7 @@ from src.setting import MAIN_VOLUME
 from src.helper.sound.sound_loader import load_sound, play_music
 from src.helper.image import load_image, del_image
 from src.helper.sound import load_music
+from src.game.groups import G_BOSS
 from .Scout import EnemyScout
 from .Phoenix import EnemyPhoenix
 from .Carrier import EnemyCarrier
@@ -22,7 +23,7 @@ class Level1:
 
     def __init__(self, enable_event=True) -> None:
         self.start_time = 0
-        load_image("Enemy/Laser.png")
+        load_image("Enemy/laser.png")
         load_image("Enemy/Laser2.png")
         load_image("Enemy/LaserHit.png")
         load_image("Enemy/Scout/ScoutBase.png")
@@ -83,7 +84,7 @@ class Level1:
         self._count_create_phoenix = 0
         self._phoenix_created_times = 0
         self._count_create_carrier = 0
-        self.carrier_created = False
+        self._carrier_created = False
 
     def start(self):
         self.start_time = pygame.time.get_ticks()
@@ -98,7 +99,15 @@ class Level1:
         load_music("music/bgm1.ogg", MAIN_VOLUME - 0.4)
         play_music()
 
+    @property
+    def is_completed(self) -> bool:
+        """ The level is completed once the Carrier has appeared and been destroyed """
+        return self._carrier_created and G_BOSS.sprite is None
+
     def update(self):
+        if self.is_completed:
+            return
+
         self._count_create_phoenix += 1
 
         if self.spwan_speed_scout > self.SPAWN_SPEED_SCOUT_MAX:
@@ -133,35 +142,11 @@ class Level1:
                     side=random.choice(["left", "right"]))
                 logging.info('Create Phoenix')
 
-    def event_handler(self, event):
-        if event.type == self.EVENT_CREATE_SCOUT:
-            if EnemyScout.add_enemy_scout(1):
-                logging.info('Create Scout')
-            return True
-        elif event.type == self.EVENT_CREATE_PHOENIX:
-            if pygame.time.get_ticks() - self.start_time > 60000:
-                EnemyPhoenix.add_enemy_phoenix()
-            else:
-                EnemyPhoenix.add_enemy_phoenix(
-                    side=random.choice(["left", "right"]))
-            logging.info('Create Phoenix')
-            return True
-        elif event.type == self.EVENT_CREATE_CARRIER:
-            EnemyCarrier()
-            logging.info('Create Carrier')
-            pygame.time.set_timer(self.EVENT_CREATE_CARRIER, 0)
-            pygame.time.set_timer(self.EVENT_CREATE_PHOENIX, 0)
-            pygame.time.set_timer(self.EVENT_CREATE_PHOENIX,
-                                  self.SPAWN_SPEED_PHOENIX * 2)
-            pygame.time.set_timer(self.EVENT_CREATE_SCOUT, 0)
-            return True
-        return False
-
     def __del__(self) -> None:
-        del_image("Enemy/ScoutBase.png")
-        del_image("Enemy/ScoutNormal.png")
-        del_image("Enemy/ScoutDestroy.png")
-        del_image("Enemy/ScoutHit.png")
+        del_image("Enemy/Scout/ScoutBase.png")
+        del_image("Enemy/Scout/ScoutNormal.png")
+        del_image("Enemy/Scout/ScoutDestroy.png")
+        del_image("Enemy/Scout/ScoutHit.png")
         del_image("Enemy/Scout/ScoutAttack.png")
         del_image("Enemy/Phoenix/PhoenixBase.png")
         del_image("Enemy/Phoenix/PhoenixNormal.png")

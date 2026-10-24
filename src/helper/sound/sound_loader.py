@@ -28,7 +28,7 @@ class _SoundBuffer(object):
     def __getitem__(self, key):
         if key not in self.BUFFER:
             logging.warning(
-                "<WARNING> Sound [{key}] not loaded")
+                f"<WARNING> Sound [{key}] not loaded")
             return NoneSound(key)
         return self.BUFFER[key]
 
@@ -37,6 +37,9 @@ class _SoundBuffer(object):
 
     def __delitem__(self, key):
         del self.BUFFER[key]
+
+    def pop(self, key, default=None):
+        return self.BUFFER.pop(key, default)
 
 
 _SOUND = _SoundBuffer()
@@ -69,6 +72,7 @@ def load_sound(filename, volume, label):
         logging.warning(
             "<WARNING> Mixer hasn't initialized, failed loading sound ！")
         _SOUND[label] = NoneSound(label)
+        return
 
     full_path = os.path.join(_sound_dir, filename)
 

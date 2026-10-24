@@ -7,13 +7,9 @@ from src.util.type import Pos, Size
 from .Interceptor import EnemyInterceptor
 from src.game.groups import G_Enemy_Bullets
 
-from threading import Thread
-
 
 class EnemyCarrier(EnemyBoss):
     MAX_INTERCEPTOR_NUMBER = 9
-
-    SEND_INTERCEPTOR_INTERVAL = 5
 
     ATTACK_SPEED = 700
 
@@ -43,32 +39,12 @@ class EnemyCarrier(EnemyBoss):
             self._shoot_interceptor()
 
     def _shoot_interceptor(self):
-        class Send_Interceptor (Thread):
-            def __init__(self, ref, counter):
-                Thread.__init__(self)
-                self.ref = ref
-                self.counter = counter
-
-            def run(self):
-                while self.counter > 0:
-                    self.counter -= 1
-
-                AttachEffect(
-                    self.ref,
-                    frames={
-                        "IDLE": self.ref.frames["ATTACK_INTERCEPTOR"]
-                    },
-                    frame_size=None,
-                    enable_rotate=False,
-                    cb_func=_attack_cb
-                )
-
         def _attack_cb():
             if self.is_active and len(EnemyInterceptor.GROUP.sprites()) < self.MAX_INTERCEPTOR_NUMBER:
                 pos = self.rect.center
                 EnemyInterceptor(Pos(pos),  [[pos[0], pos[1] + 300]])
-                Send_Interceptor(
-                    self, self.SEND_INTERCEPTOR_INTERVAL).start()
+                # Launch the next one after another attack animation, until the limit is reached
+                self._shoot_interceptor()
         AttachEffect(
             self,
             frames={

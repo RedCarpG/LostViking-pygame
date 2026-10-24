@@ -17,7 +17,7 @@ class _SoundBuffer(object):
         self.BUFFER[key] = item
 
     def __delitem__(self, key):
-        .BUFFER[key]
+        del self.BUFFER[key]
 
 
 def test_func():

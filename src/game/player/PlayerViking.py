@@ -68,7 +68,7 @@ class PlayerBulletViking(PlayerBullet):
                  player: PlayerPlane,
                  angle=None):
         super().__init__(pos=pos, speed=speed,
-                         image=get_image("PlayerPlane/Bullet.png"), player=player)
+                         image=get_image("PlayerPlane/bullet.png"), player=player)
         self.damage = damage
         if angle:
             self._rotate(angle)

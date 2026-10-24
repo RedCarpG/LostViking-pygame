@@ -1,5 +1,5 @@
 
-from .player_event_handler import detect_custom_event
+from .player_event_handler import detect_custom_event, stop_player_shoot, reset_player_events
 from .PlayerWeapon import PlayerWeapon
 from .PlayerPlane import PlayerPlane
 from .PlayerBomb import PlayerNucBomb
@@ -8,7 +8,7 @@ from .PlayerViking import PlayerViking, PlayerWeaponViking, PlayerBulletViking
 
 def load_asset_player():
     from src.helper.image import load_image
-    load_image("PlayerPlane/Bullet.png")
+    load_image("PlayerPlane/bullet.png")
     load_image("PlayerPlane/Bomb.png")
     load_image("PlayerPlane/BulletHit.png")
 
