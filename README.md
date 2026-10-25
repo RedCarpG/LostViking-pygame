@@ -28,6 +28,7 @@ Add `--build` to only build `build/web` without starting the test server.
 | --- | --- |
 | WASD or arrow keys | Move |
 | Space | Shoot |
+| E | Switch weapon (the Viking transforms) |
 | Q | Nuclear bomb |
 | Esc or P | Pause |
 | Tab | Show / hide equipment panel |
@@ -39,9 +40,16 @@ They are saved with the best score in `settings.json` (desktop) or the browser s
 ## Gameplay
 
 - Survive the waves of Scouts and Phoenixes until the Carrier comes (a WARNING tells you), then destroy it.
-- Supplies: weapon upgrade (5 levels), nuclear bomb, repair (or one more life when not damaged).
+- Two weapons, as the StarCraft II Viking, switched with E (no shot while the Viking transforms):
+  - **Twin gatling**: fast straight shots, the best against light ships (Interceptors, Phoenixes) and shields.
+  - **Lanzer Torpedoes**: homing torpedoes in salvos of pairs, extra damage against armored ships
+    (Scouts, the Carrier).
+- Supplies: weapon upgrade (5 levels, for both weapons), nuclear bomb, repair (or one more life when not damaged).
   They blink before they leave and fly to you once you are close.
 - Losing a life costs the weapon upgrades: they drop from the wreck, pick them up again.
+- Scouts weave, dive at you, strafe across the screen or stop to fire aimed bursts, alone or in formations.
+- Phoenixes use a **Graviton Beam**: a dashed line shows where they aim, it locks and blinks, then fires.
+  If it catches you, you are pulled toward the Phoenix and hard to steer: break its shield to get free.
 - The Carrier gets angry below half health: its attacks come faster.
 
 ## Test mode
@@ -49,6 +57,7 @@ They are saved with the best score in `settings.json` (desktop) or the browser s
 Choose **Test Mode** in the main menu to play with a test panel (press `` ` `` to show / hide it).
 Each action has a key and can also be clicked: spawn any enemy or the boss, damage the boss,
 level up the weapon, add bombs and lives, god mode, turn automatic spawning off and show hitboxes.
+"Scout wave" brings a random Scout formation.
 Test mode scores do not count as best score.
 
 ## Development

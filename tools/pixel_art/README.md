@@ -13,7 +13,9 @@ The game uses a pixel-art style: hard edges, small palettes, no smooth gradients
 | Carrier laser | Drawn by the game at 2x (`src/game/level/level1/CarrierLaser.py`) |
 | Planets | Random on every run, drawn by the game at 2x (`src/game/ui/Planets.py`) |
 | Red screen edges, WARNING banner | Drawn by the game at 2x (`src/game/animation/ScreenFX.py`) |
-| Muzzle flashes | Drawn by the game at 2x (`src/game/animation/MuzzleFlash.py`) |
+| Muzzle flashes, transform ring | Drawn by the game at 2x (`src/game/animation/MuzzleFlash.py`, `TransformRing.py`) |
+| Lanzer Torpedoes and their smoke | Drawn by the game at 2x, turned with RotSprite (`src/game/player/LanzerTorpedo.py`) |
+| Phoenix Graviton Beam | Drawn by the game on the 2x grid (`src/game/level/level1/GravitonBeam.py`) |
 
 The effects drawn by the game share the helpers in `src/game/animation/pixel_fx.py`
 (ordered dither, value noise, nearest-neighbour 2x scaling). Explosions, the laser and the
