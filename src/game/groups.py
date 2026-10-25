@@ -23,3 +23,6 @@ G_Supplies = Group()
 G_Effects = Group()
 # Floating texts, drawn over the effects
 G_Texts = Group()
+
+# Beams drawn straight onto the screen by their draw() method (see GravitonBeam)
+G_Beams = Group()

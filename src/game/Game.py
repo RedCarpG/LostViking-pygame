@@ -11,7 +11,7 @@ from src.helper.sound import load_music, play_music
 from src.setting import MAIN_VOLUME, SCREEN_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
 
 from src.game.groups import G_Player1, G_Players, G_BOSS, G_Bomb, G_Enemys, G_Enemy_Bullets, \
-    G_Player_Bullets, G_Supplies, G_Effects, G_Texts
+    G_Player_Bullets, G_Supplies, G_Effects, G_Texts, G_Beams
 from src.game.player import PlayerViking, load_asset_player, detect_custom_event, reset_player_events
 from src.game.ui import UI, load_asset_ui, UIIntro, UIPause, UIResult, UISettings, Scoreboard, \
     FPSCounter, Background, TestPanel
@@ -254,6 +254,7 @@ class Game:
         G_Players.update()
         G_Supplies.update()
         G_Enemys.update()
+        G_Beams.update()
         G_Bomb.update()
         G_Effects.update()
         G_Texts.update()
@@ -334,6 +335,8 @@ class Game:
         G_Player_Bullets.draw(self.screen)
         G_Enemys.draw(self.screen)
         G_Players.draw(self.screen)
+        for beam in G_Beams:
+            beam.draw(self.screen)
         G_Supplies.draw(self.screen)
         G_Effects.draw(self.screen)
         G_Texts.draw(self.screen)
@@ -424,7 +427,7 @@ class Game:
         ScreenFX.reset()
 
         # Kill every sprite so it also leaves the per-class groups (e.g. EnemyScout.GROUP)
-        for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Texts, G_Enemys,
+        for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Texts, G_Beams, G_Enemys,
                       G_Player_Bullets, G_Supplies, G_Player1, G_Players]:
             for sprite in group.sprites():
                 sprite.kill()

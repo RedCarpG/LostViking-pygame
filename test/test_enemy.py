@@ -82,3 +82,76 @@ def test_boss_death_ends_the_round_in_victory(round_game):
             break
     assert round_game.state == GameState.VICTORY
     G_Enemy_Bullets.empty()
+
+
+def _phoenix_above_player(game, attack=False):
+    """ A Phoenix staying right above the plane, which can be hit (no god mode) """
+    from src.game.level.level1 import EnemyPhoenix
+    from src.game.TestMode import TestMode
+    TestMode.god_mode = False
+    game.apply_god_mode()
+    x = game.player.rect.centerx
+    phoenix = EnemyPhoenix(Pos([x, 200]), is_left=True)
+    phoenix.enter_action_stay_phase()
+    phoenix.set_pos(Pos([x, 200]))
+    phoenix.angle = 0
+    phoenix._count_attack_interval = 0 if attack else 10 ** 6
+    phoenix._count_graviton = 0
+    return phoenix
+
+
+def _until(game, condition, frames):
+    for _ in range(frames):
+        if condition():
+            return True
+        run(game, 1)
+    return condition()
+
+
+def test_graviton_beam_catches_and_pulls_the_plane(round_game):
+    from src.game.level.level1.Phoenix import BulletPhoenix
+    from src.game.level.level1.GravitonBeam import GravitonBeam
+    player = round_game.player
+    phoenix = _phoenix_above_player(round_game, attack=True)
+    run(round_game, 1)
+    assert phoenix.graviton is not None and phoenix.graviton.phase == GravitonBeam.AIM
+    assert _until(round_game, lambda: player.lifted, GravitonBeam.AIM_FRAMES + GravitonBeam.LOCK_FRAMES + 5)
+    y = player.rect.centery
+    run(round_game, 40)
+    assert player.rect.centery < y - 30
+    # No laser while the beam is on
+    assert not any(isinstance(each, BulletPhoenix) for each in G_Enemy_Bullets)
+    # The beam lets go in the end
+    assert _until(round_game, lambda: not player.lifted, GravitonBeam.LIFT_FRAMES)
+
+
+def test_breaking_the_shield_frees_the_plane(round_game):
+    from src.game.groups import G_Texts
+    player = round_game.player
+    phoenix = _phoenix_above_player(round_game)
+    assert _until(round_game, lambda: player.lifted, 100)
+    phoenix.hit(phoenix.MAX_SHIELD)
+    run(round_game, 1)
+    assert not player.lifted and not phoenix.graviton.alive()
+    assert any(each.image.get_width() > 0 for each in G_Texts)
+
+
+def test_moving_out_of_the_locked_beam_dodges_it(round_game):
+    from src.game.level.level1.GravitonBeam import GravitonBeam
+    player = round_game.player
+    phoenix = _phoenix_above_player(round_game)
+    assert _until(round_game, lambda: phoenix.graviton is not None and phoenix.graviton.phase == GravitonBeam.LOCK, 80)
+    player.rect.centerx += 250
+    run(round_game, GravitonBeam.LOCK_FRAMES + GravitonBeam.FIRE_FRAMES + 2)
+    assert not player.lifted
+    assert phoenix.graviton is None
+
+
+def test_an_invincible_plane_is_not_caught(round_game):
+    from src.game.TestMode import TestMode
+    player = round_game.player
+    _phoenix_above_player(round_game)
+    TestMode.god_mode = True
+    round_game.apply_god_mode()
+    run(round_game, 100)
+    assert not player.lifted

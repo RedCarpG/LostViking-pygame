@@ -85,6 +85,9 @@ class PlayerPlane(AnimeSprite):
         self._weapons = weapons
         self._weapon_index = 0
         self._count_transform = 0
+        # Graviton beam holding the plane (see lift), and the part of a pixel not moved yet
+        self._lifted_by = None
+        self._lift_carry = Vector2(0, 0)
 
         self._score = 0
         # Enemies destroyed by this player
@@ -145,10 +148,18 @@ class PlayerPlane(AnimeSprite):
     # --------------------- Behaviors ---------------------
 
     def _move(self) -> None:
-        if self._speed.y != 0 or self._speed.x != 0:
+        beam = self._lifted_by
+        if self._speed.y != 0 or self._speed.x != 0 or beam is not None:
             # Move this object
             # (Note: this is the only place when the object is really moving)
-            self.rect.move_ip(self._speed)
+            if beam is not None:
+                # Held by a graviton beam: weak controls, pulled toward the beam's ship
+                delta = self._speed * beam.CONTROL + beam.pull(self.rect.center) + self._lift_carry
+                step = (int(delta.x), int(delta.y))
+                self._lift_carry = delta - Vector2(step)
+                self.rect.move_ip(step)
+            else:
+                self.rect.move_ip(self._speed)
 
             # Speed down if there's no movement command on X or Y
             # (Note: Only values of _speed_x/_speed_y will be changed here)
@@ -240,6 +251,25 @@ class PlayerPlane(AnimeSprite):
             return True
         else:
             return False
+
+    # ------------------ Graviton beam (Phoenix)
+    @property
+    def lifted(self) -> bool:
+        return self._lifted_by is not None
+
+    def lift(self, beam) -> bool:
+        """ Caught by a graviton beam (see GravitonBeam)
+        :return: False if it can not be caught (destroyed, invincible or already held)
+        """
+        if not self.is_active or self.is_invincible or self._lifted_by is not None:
+            return False
+        self._lifted_by = beam
+        self._lift_carry = Vector2(0, 0)
+        return True
+
+    def release(self, beam) -> None:
+        if self._lifted_by is beam:
+            self._lifted_by = None
 
     def invincible(self, duration: int = None, continuous: bool = False):
         if continuous:

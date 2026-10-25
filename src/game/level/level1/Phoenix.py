@@ -4,15 +4,20 @@ import pygame
 from pygame import Vector2
 from pygame.sprite import Sprite
 from src.game.enemy import EnemyII, EnemyBullet, EnemyStatusBar
-from src.game.groups import G_Effects
+from src.game.enemy.EnemyII import EnemyIIActionPhase
+from src.game.groups import G_Effects, G_Beams, G_Player1
 from src.helper.image import get_image
 from src.setting import SCREEN_WIDTH
 from src.util.type import Pos
 from src.game.animation import AnimeSprite, ScreenShake
 from src.helper.sound import play_sound
+from .GravitonBeam import GravitonBeam
 
 
 class EnemyPhoenix(EnemyII):
+    """ Shielded fighter: aims its laser at the plane and, now and then, holds it with a
+    graviton beam (see GravitonBeam) while other enemies shoot
+    """
 
     MAX_HEALTH = 600
     SCORE = 2000
@@ -30,6 +35,10 @@ class EnemyPhoenix(EnemyII):
     EXPLOSION = "large"
     DESTROY_SOUND = "PHOENIX_DESTROY"
     HITSTOP_DESTROY = 3
+
+    # Frames of its stay before the first graviton beam, and between two beams
+    GRAVITON_FIRST = (60, 200)
+    GRAVITON_COOLDOWN = (480, 720)
 
     def __init__(self, pos, is_left):
         super().__init__(
@@ -51,10 +60,15 @@ class EnemyPhoenix(EnemyII):
         self._count_regen_delay = 0
         self.shield_bubble = PhoenixShieldBubble(self)
         self.status_bar = EnemyStatusBar(self, has_shield=True)
+        self.graviton = None
+        self._count_graviton = random.randint(*self.GRAVITON_FIRST)
         play_sound("PHOENIX_ARRIVE")
     # ---------- Override Methods
 
     def shoot(self, target):
+        # An attack started just before the beam does not fire while it channels
+        if self.graviton is not None:
+            return
         # --- Correct the release point of the bullet from attack animation
         correction = Vector2(0, 100)
         correction = correction.rotate(-self.angle)
@@ -96,6 +110,35 @@ class EnemyPhoenix(EnemyII):
                 play_sound("SHIELD")
                 self.shield_bubble.pulse()
             self.shield = min(self.MAX_SHIELD, self.shield + self.SHIELD_REGEN)
+        self._update_graviton()
+
+    # --------------- Graviton beam --------------- #
+    def _update_graviton(self):
+        if self.graviton is not None:
+            if self.graviton.alive():
+                return
+            self.graviton = None
+            self._count_graviton = random.randint(*self.GRAVITON_COOLDOWN)
+        if self.state != EnemyIIActionPhase.Stay:
+            return
+        if self._count_graviton > 0:
+            self._count_graviton -= 1
+            return
+        player = G_Player1.sprite
+        # One beam at a time, and only at a plane that can be caught
+        if len(G_Beams) == 0 and self.shield > 0 and player is not None \
+                and player.is_active and not player.is_invincible:
+            self.graviton = GravitonBeam(self)
+
+    def aim(self, point: Pos):
+        # Holds still while the beam is locked or firing
+        if self.graviton is None or not self.graviton.locks_aim:
+            super().aim(point)
+
+    def attack(self, target):
+        # No laser while it channels the beam
+        if self.graviton is None:
+            super().attack(target)
 
     @classmethod
     def add_enemy_phoenix(cls, side=None) -> bool:
