@@ -25,7 +25,11 @@ class SupplyStatus(Enum):
 
 class Supply(AnimeSprite, abc.ABC):
     """ A supply floats on smooth curves: it steers toward a target point that changes
-    from time to time (inside the play area), then glides down and leaves the screen
+    from time to time (inside the play area). There are two kinds:
+    - sent in (`spawn`): it comes down from the top of the screen, and when its time is up
+      it flies down and leaves the screen
+    - dropped (created at a position: by a destroyed ship, or the lost upgrades of the
+      plane): when its time is up it blinks, then disappears where it is
     """
 
     MOVE_PHASE_DURATION = 1500
@@ -49,8 +53,8 @@ class Supply(AnimeSprite, abc.ABC):
     BOB_HEIGHT = 3
     BOB_PERIOD = 90
 
-    # Blinks during the last frames before it leaves, and while leaving
-    BLINK_BEFORE_LEAVE = 180
+    # A dropped supply blinks during its last frames, then disappears
+    BLINK_BEFORE_END = 180
     BLINK_PERIOD = 12
 
     # Drawn to the player once this close (pixels), at up to MAGNET_SPEED pixels per frame
@@ -67,7 +71,7 @@ class Supply(AnimeSprite, abc.ABC):
     GET_SOUND = None
 
     def __init__(self, pos: Pos = None):
-        """ :param pos: where it appears, None: comes in from the top of the screen """
+        """ :param pos: where it is dropped, None: sent in from the top of the screen (see spawn) """
         super().__init__(frames={
             "BASE": get_image("Supply/SupplyBase.png"),
             "IDLE": get_image(self.IMAGE)
@@ -83,12 +87,22 @@ class Supply(AnimeSprite, abc.ABC):
         self._count_target = 0
         self._count_status_duration = self.MOVE_PHASE_DURATION
         self._time = random.uniform(0, self.BOB_PERIOD)
+        self.dropped = pos is not None
 
         self.set_pos(pos)
         if pos is None:
             self.enter_action_enter_phase()
         else:
             self.enter_action_move_phase()
+
+    @classmethod
+    def spawn(cls, x=None):
+        """ Send a supply in: it comes down from the top of the screen at `x` (None: anywhere) """
+        supply = cls()
+        if x is not None:
+            supply._pos.x = x
+            supply.rect.centerx = round(x)
+        return supply
 
     def update(self):
         self.anime()
@@ -114,10 +128,9 @@ class Supply(AnimeSprite, abc.ABC):
     _hidden = False
 
     def _blink(self):
-        """ Warn that it is about to leave: hidden every other half period """
-        leaving = self.status == SupplyStatus.Leave or (
-            self.status == SupplyStatus.Move and self._count_status_duration < self.BLINK_BEFORE_LEAVE)
-        hidden = leaving and int(self._time // (self.BLINK_PERIOD // 2)) % 2 == 1
+        """ A dropped supply about to disappear: hidden every other half period """
+        ending = self.dropped and self.status == SupplyStatus.Move             and self._count_status_duration < self.BLINK_BEFORE_END
+        hidden = ending and int(self._time // (self.BLINK_PERIOD // 2)) % 2 == 1
         if hidden != self._hidden:
             self._hidden = hidden
             self._render_frame()
@@ -187,7 +200,7 @@ class Supply(AnimeSprite, abc.ABC):
         if speed < 0.05:
             # Standing still: start moving toward `wanted`
             if wanted_speed > 0:
-                self._velocity = wanted.normalize() * min(wanted_speed, self.ACC)
+                self._velocity = wanted.normalize() * min(wanted_speed, speed + self.ACC)
             return
         if wanted_speed > 0:
             angle = (self._velocity.angle_to(wanted) + 180) % 360 - 180
@@ -216,7 +229,10 @@ class Supply(AnimeSprite, abc.ABC):
 
         self._count_status_duration -= 1
         if self._count_status_duration <= 0:
-            self.enter_action_leave_phase()
+            if self.dropped:
+                self.kill()
+            else:
+                self.enter_action_leave_phase()
 
     def _action_leave(self):
         self._steer(Vector2(0, self.LEAVE_SPEED))

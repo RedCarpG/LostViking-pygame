@@ -47,9 +47,8 @@ def update_supply_timer():
 def supply_events_handler(event):
     global _count_drop_cooldown
     if event.type == EVENT_ADD_SUPPLY:
-        pos = Pos(
-            [random.randint(int(SCREEN_WIDTH/3), int(2 * SCREEN_WIDTH/3)), -50])
-        get_supply_type()(pos)
+        # Sent in: it comes down from the top of the screen
+        get_supply_type().spawn(random.randint(int(SCREEN_WIDTH/3), int(2 * SCREEN_WIDTH/3)))
 
     elif event.type == EVENT_DROP_SUPPLY:
         if _count_drop_cooldown > 0 or len(G_Supplies) >= DROP_MAX_ON_SCREEN:
