@@ -13,7 +13,9 @@ def _handle_player_shoot_event(player: PlayerPlane):
 
 
 def _handle_player_bomb_launch_event(player: PlayerPlane):
-    if player.bomb_count > 0:
+    if player.in_stasis:
+        play_sound("BOMB_ERROR")
+    elif player.bomb_count > 0:
         player.dec_bomb()
         PlayerNucBomb.launch(player.pos, player)
         pygame.event.set_blocked(EVENT_PLAYER_BOMB)

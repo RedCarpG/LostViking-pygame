@@ -88,6 +88,8 @@ class PlayerPlane(AnimeSprite):
         # Graviton beam holding the plane (see lift), and the part of a pixel not moved yet
         self._lifted_by = None
         self._lift_carry = Vector2(0, 0)
+        # Frames left frozen in stasis (see stasis)
+        self._count_stasis = 0
 
         self._score = 0
         # Enemies destroyed by this player
@@ -119,6 +121,10 @@ class PlayerPlane(AnimeSprite):
     # --------------- Super Methods Override --------------- #
     def update(self) -> None:
         """ Update method from Sprite, is called per frame """
+        if self._count_stasis > 0:
+            # Frozen: no animation, no move, nothing touches it
+            self._count_stasis -= 1
+            return
         super().update()
         if not self.is_active and self.current_state == "DESTROY" \
                 and self._current_frame_index >= self.DESTROY_FRAMES_SHOWN:
@@ -225,7 +231,7 @@ class PlayerPlane(AnimeSprite):
         """
         This function is called in collision detection
         """
-        if not self.is_invincible and self.is_active:
+        if not self.is_invincible and self.is_active and not self.in_stasis:
             # Take damage
             self._health -= damage
             # Red screen edges, stronger for a bigger hit
@@ -261,7 +267,7 @@ class PlayerPlane(AnimeSprite):
         """ Caught by a graviton beam (see GravitonBeam)
         :return: False if it can not be caught (destroyed, invincible or already held)
         """
-        if not self.is_active or self.is_invincible or self._lifted_by is not None:
+        if not self.is_active or self.is_invincible or self._lifted_by is not None or self.in_stasis:
             return False
         self._lifted_by = beam
         self._lift_carry = Vector2(0, 0)
@@ -270,6 +276,24 @@ class PlayerPlane(AnimeSprite):
     def release(self, beam) -> None:
         if self._lifted_by is beam:
             self._lifted_by = None
+
+    # ------------------ Stasis (Oracle's Stasis Ward)
+    @property
+    def in_stasis(self) -> bool:
+        return self._count_stasis > 0
+
+    def stasis(self, frames) -> bool:
+        """ Frozen for `frames`: it can not move or shoot, and nothing can hurt it (as in StarCraft II)
+        :return: False if it can not be frozen (destroyed, invincible or already frozen)
+        """
+        if not self.is_active or self.is_invincible or self.in_stasis:
+            return False
+        self._count_stasis = frames
+        self._speed.update(0, 0)
+        self._is_moving_x = self._is_moving_y = False
+        if self._lifted_by is not None:
+            self._lifted_by.kill()
+        return True
 
     def invincible(self, duration: int = None, continuous: bool = False):
         if continuous:
@@ -288,7 +312,7 @@ class PlayerPlane(AnimeSprite):
         """
         This method is called from a user attack event
         """
-        if self.is_active and self._count_transform == 0:
+        if self.is_active and self._count_transform == 0 and not self.in_stasis:
             if self._count_attack_interval == 0:
                 weapon = self.weapon
                 play_sound(weapon.SHOOT_SOUND)
@@ -301,7 +325,7 @@ class PlayerPlane(AnimeSprite):
             # Each enemy decides how much a collision hurts (see EnemyI.COLLIDE_DAMAGE)
             if enemy.COLLIDE_DAMAGE is None:
                 self.destroy()
-            else:
+            elif enemy.COLLIDE_DAMAGE:
                 self.hit(enemy.COLLIDE_DAMAGE)
             enemy.collide_player()
             if not enemy.is_active:
@@ -452,7 +476,7 @@ class PlayerPlane(AnimeSprite):
         """ Change to the next weapon (the plane can not shoot while it transforms)
         :return: False if it can not switch now
         """
-        if not self.is_active or self._count_transform > 0 or len(self._weapons) < 2:
+        if not self.is_active or self._count_transform > 0 or len(self._weapons) < 2 or self.in_stasis:
             return False
         self._weapon_index = (self._weapon_index + 1) % len(self._weapons)
         self._count_transform = self.TRANSFORM_FRAMES
@@ -562,6 +586,7 @@ class PlayerPlane(AnimeSprite):
         )
         self.reset_level()
         self._count_transform = 0
+        self._count_stasis = 0
         self._health = self.MAX_HEALTH
 
     # ----------------- Event -----------------
@@ -574,6 +599,8 @@ class PlayerPlane(AnimeSprite):
         # If Key Pressed
         key_pressed = pygame.key.get_pressed()
         control = self.controller
+        if self.in_stasis:
+            return
         # Vertical and horizontal axes are checked separately to allow diagonal movement
         if self._held(key_pressed, control.MOVE_UP):
             self.trigger_move_up()

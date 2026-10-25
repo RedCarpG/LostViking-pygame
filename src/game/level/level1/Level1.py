@@ -10,6 +10,8 @@ from src.game.groups import G_BOSS, G_Enemys, G_Enemy_Bullets
 from .Scout import EnemyScout
 from .Phoenix import EnemyPhoenix
 from .Carrier import EnemyCarrier
+from .Oracle import EnemyOracle
+from . import Oracle
 
 log = logging.getLogger(__name__)
 
@@ -27,6 +29,7 @@ IMAGES = [
     *_sheets("Phoenix", ("Base", "Normal", "Fast", "Destroy", "Hit", "Attack", "Shield")),
     *_sheets("Carrier", ("Base", "Normal", "Destroy", "Hit", "Attack")),
     *_sheets("Interceptor", ("Base", "Idle", "Move", "Destroy", "Hit", "Attack")),
+    *_sheets("Oracle", ("Base", "Normal", "Destroy", "Hit", "Attack")),
 ]
 
 # (file, volume, label)
@@ -44,6 +47,10 @@ SOUNDS = [
     ("Enemy/InterceptorLaser.ogg", MAIN_VOLUME - 0.4, "INTERCEPTOR_LASER"),
     ("Enemy/InterceptorCreate.ogg", MAIN_VOLUME - 0.4, "INTERCEPTOR_CREATE"),
     ("Enemy/Hit.ogg", MAIN_VOLUME - 0.4, "ENEMY_HIT"),
+    # Oracle: the pulsar beam (the Carrier laser sound, quieter), the stasis ward and the stasis
+    ("Enemy/CarrierLaser.ogg", MAIN_VOLUME - 0.38, "ORACLE_BEAM"),
+    ("Enemy/StasisWard.ogg", MAIN_VOLUME - 0.3, "STASIS_WARD"),
+    ("Enemy/Stasis.ogg", MAIN_VOLUME - 0.2, "STASIS"),
 ]
 
 MUSIC = ("music/bgm1.ogg", MAIN_VOLUME - 0.4)
@@ -70,6 +77,11 @@ class Level1:
     # so about as many Scouts come as before
     FORMATION_PAUSE = 0.9
 
+    # Oracles warp in from this frame on, one at a time, then every SPAWN_SPEED_ORACLE frames
+    # (not during the boss fight)
+    SPAWN_ORACLE_FIRST = 2600
+    SPAWN_SPEED_ORACLE = 2800
+
     # When the boss comes the level music fades out, and the boss music starts this many frames later
     MUSIC_FADE_MS = 1200
     BOSS_MUSIC_DELAY = 75
@@ -88,6 +100,10 @@ class Level1:
             queue_rotations(get_image(f"Enemy/Scout/Scout{name}.png"), 53)
         for name in ["Idle", "Move", "Destroy", "Hit", "Attack"]:
             queue_rotations(get_image(f"Enemy/Interceptor/Interceptor{name}.png"), 30)
+        for name in ["Normal", "Destroy", "Hit", "Attack"]:
+            queue_rotations(get_image(f"Enemy/Oracle/Oracle{name}.png"), 64)
+        # Pulsar beam, stasis ward and stasis crystal images
+        Oracle.prepare()
 
         load_sounds(SOUNDS)
 
@@ -99,6 +115,7 @@ class Level1:
         self._count_create_carrier = 0
         self._carrier_created = False
         self._count_boss_music = 0
+        self._count_create_oracle = 0
         # Spawn enemies over time, can be turned off in test mode
         self.auto_spawn = True
 
@@ -112,6 +129,7 @@ class Level1:
         self._count_create_carrier = 0
         self._carrier_created = False
         self._count_boss_music = 0
+        self._count_create_oracle = self.SPAWN_SPEED_ORACLE - self.SPAWN_ORACLE_FIRST
 
         load_music(*MUSIC)
         play_music()
@@ -181,6 +199,11 @@ class Level1:
                     EnemyPhoenix.add_enemy_phoenix(
                         side=random.choice(["left", "right"]))
                 log.debug('Create Phoenix')
+            self._count_create_oracle += 1
+            if self._count_create_oracle > self.SPAWN_SPEED_ORACLE and len(EnemyOracle.GROUP) == 0:
+                self._count_create_oracle = 0
+                EnemyOracle.warp_in()
+                log.debug('Create Oracle')
             if self._count_create_carrier > self.SPAWN_SPEED_CARRIER:
                 self.spawn_carrier()
         else:

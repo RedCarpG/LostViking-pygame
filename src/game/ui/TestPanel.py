@@ -49,7 +49,7 @@ class TestPanel:
 
     def _build_rows(self):
         # Imported here: the level modules are only needed once the game is running
-        from src.game.level.level1 import EnemyScout, EnemyPhoenix, EnemyInterceptor
+        from src.game.level.level1 import EnemyScout, EnemyPhoenix, EnemyInterceptor, EnemyOracle
         from src.game.supply import get_supply_type
         game = self.game
 
@@ -87,6 +87,7 @@ class TestPanel:
         entry(K_2, "2", lambda: ("Phoenix", None),
               lambda: EnemyPhoenix.add_enemy_phoenix(side=random.choice(["left", "right"])))
         entry(K_3, "3", lambda: ("Interceptor", None), spawn_interceptor)
+        entry(K_o, "O", lambda: ("Oracle", None), lambda: EnemyOracle.warp_in())
         entry(K_4, "4", lambda: ("Carrier (boss)", None), lambda: game.level.spawn_carrier())
         header("PLAYER")
         entry(K_5, "5", lambda: ("Weapon level +1", f"Lv {game.player.level}"),
