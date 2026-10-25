@@ -42,6 +42,8 @@ class EnemyStargate(EnemyBoss):
     ARMORED = True
     GROUND = True
     COLLIDE_DAMAGE = 0
+    # The portal and its arches only: the cannons on the wings must stay in reach of the shots
+    HITBOX = (180, 200)
 
     # Comes in slowly, like the outposts
     MAX_SPEED_Y = 1.2

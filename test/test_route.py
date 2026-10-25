@@ -292,3 +292,18 @@ def test_the_bomb_hits_structures(round_game):
     assert all(each.health == each.MAX_HEALTH - 1000 or not each.is_active for each in platform.structures)
     G_Player_Bullets.empty()
     _clear(round_game)
+
+
+def test_shots_reach_the_stargate_cannons(round_game):
+    from pygame import Vector2
+    from src.game.player.PlayerViking import PlayerBulletViking
+    gate = _stargate(round_game)
+    for cannon in gate.cannons:
+        health = cannon.health
+        bullet = PlayerBulletViking(Pos(list(cannon.rect.center)), Vector2(0, -17), 80, player=round_game.player)
+        bullet.collide_enemy(G_Enemys)
+        assert cannon.health < health and gate.health == gate.MAX_HEALTH, "the cannon is hit, not the gate"
+    bullet = PlayerBulletViking(Pos(list(gate.portal)), Vector2(0, -17), 80, player=round_game.player)
+    bullet.collide_enemy(G_Enemys)
+    assert gate.health < gate.MAX_HEALTH, "the portal is still the gate's"
+    _clear(round_game)

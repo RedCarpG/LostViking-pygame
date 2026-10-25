@@ -59,10 +59,12 @@ class EnemyBoss(EnemyI):
     HIT_OVERLAY_QUIET = 30
 
     # Energy shield (0: none). It takes the hits first and recharges after SHIELD_REGEN_DELAY
-    # frames without a hit, SHIELD_REGEN points per frame; once broken (0) it is gone for good
+    # frames without a hit, SHIELD_REGEN points per frame; once broken it comes back after
+    # the longer SHIELD_BREAK_DELAY
     MAX_SHIELD = 0
     SHIELD_REGEN = 0
     SHIELD_REGEN_DELAY = 120
+    SHIELD_BREAK_DELAY = 300
     SHAKE_SHIELD_BREAK = 0.5
 
     def __init__(self, frames, frame_size: Size, **kwargs):
@@ -112,17 +114,22 @@ class EnemyBoss(EnemyI):
             self._break_shield()
 
     def _break_shield(self) -> None:
+        self._count_shield_regen = self.SHIELD_BREAK_DELAY
         self.shield_effect.burst()
         ScreenShake.add(self.SHAKE_SHIELD_BREAK)
         play_sound("POWER_DOWN")
         FloatingText((self.rect.centerx, self.rect.bottom + 30), "SHIELD DOWN", WARNING_COLOR, duration=90)
 
     def _regenerate_shield(self) -> None:
-        """ Recharges after a while without a hit, unless it was broken """
-        recharging = 0 < self.shield < self.MAX_SHIELD and self._count_shield_regen == 0
+        """ Recharges after a while without a hit (a longer while once broken) """
+        recharging = self.shield < self.MAX_SHIELD and self._count_shield_regen == 0
         if self._count_shield_regen > 0:
             self._count_shield_regen -= 1
         elif recharging:
+            if self.shield == 0:
+                # Back online
+                play_sound("SHIELD")
+                self.shield_effect.restore()
             self.shield = min(self.MAX_SHIELD, self.shield + self.SHIELD_REGEN)
         if self.shield_effect is not None:
             self.shield_effect.recharging = recharging

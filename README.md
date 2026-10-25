@@ -99,8 +99,8 @@ of the screen, has stages, each announced by its name:
     Touching an armed ward freezes you in a crystal for almost a second: no move, no shot, no bomb,
     but no damage either. Shoot the wards down.
 - The Carrier has an energy shield (the cyan bar under its health): it takes the hits first and
-  recharges when the Carrier is left alone for a moment, until it is broken (then it is gone for
-  good). Torpedoes get no armor bonus against it: use the gatling.
+  recharges when the Carrier is left alone for a moment; once broken it comes back a few seconds
+  later. Torpedoes get no armor bonus against it: use the gatling.
 - The Carrier gets angry below half health: its attacks come faster.
 - The nuclear bomb goes through shields.
 

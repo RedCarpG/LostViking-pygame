@@ -15,7 +15,7 @@ class UIBoss:
     ENRAGED_COLORS = ((236, 110, 36), (255, 170, 80))
     NAME_COLOR = (214, 226, 255)
     BAR_RECT = pygame.Rect(36, 16, 470, 18)
-    # Shield bar under the panel, for a boss with a shield (hidden once it is broken)
+    # Shield bar under the panel, for a boss with a shield (empty while it is broken)
     SHIELD_SIZE = (470, 8)
     SHIELD_OUTLINE = (20, 26, 60)
     SHIELD_EMPTY = (30, 44, 92)
@@ -84,7 +84,7 @@ class UIBoss:
     def _blit_shield(self, boss) -> int:
         """ Draw the shield bar under the panel, :return: the height it takes """
         max_shield = getattr(boss, "MAX_SHIELD", 0)
-        if not max_shield or boss.shield <= 0:
+        if not max_shield:
             return 0
         width, height = self.SHIELD_SIZE
         rect = pygame.Rect(0, 0, width, height)

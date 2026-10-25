@@ -29,7 +29,7 @@ class EnemyCarrier(EnemyBoss):
     ARMORED = True
 
     # Its shield: about 4 s of steady gatling fire at weapon level 3 to break, back to full
-    # in about 8 s when it is left alone (see EnemyBoss)
+    # in about 8 s when it is left alone, 5 s more once broken (see EnemyBoss)
     MAX_SHIELD = 6000
     SHIELD_REGEN = 12
 

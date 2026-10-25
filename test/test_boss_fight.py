@@ -155,7 +155,7 @@ def test_the_shield_recharges_after_a_pause(round_game, carrier):
     assert carrier.shield == carrier.MAX_SHIELD
 
 
-def test_a_broken_shield_stays_down(round_game, carrier, monkeypatch):
+def test_a_broken_shield_comes_back_later(round_game, carrier, monkeypatch):
     import sys
     texts = []
     boss_module = sys.modules["src.game.enemy.EnemyBoss"]
@@ -164,18 +164,21 @@ def test_a_broken_shield_stays_down(round_game, carrier, monkeypatch):
     carrier.hit(carrier.MAX_SHIELD)
     assert carrier.shield == 0 and carrier.health == carrier.MAX_HEALTH
     assert texts == ["SHIELD DOWN"]
-    run(round_game, carrier.SHIELD_REGEN_DELAY + 300)
-    assert carrier.shield == 0, "no recharge once broken"
     carrier.hit(100)
-    assert carrier.health == carrier.MAX_HEALTH - 100
+    assert carrier.health == carrier.MAX_HEALTH - 100, "while it is down, the hull takes the hits"
+    run(round_game, carrier.SHIELD_BREAK_DELAY - 5)
+    assert carrier.shield == 0, "it stays down a while"
+    run(round_game, 30)
+    assert carrier.shield > 0 and carrier.shield_effect.alive(), "then it comes back and recharges"
+    run(round_game, 600)
+    assert carrier.shield == carrier.MAX_SHIELD
 
-
-def test_the_shield_bar_shows_until_the_shield_breaks(round_game, carrier):
+def test_the_shield_bar_stays_while_the_shield_is_down(round_game, carrier):
     ui = round_game.ui.ui_boss
     run(round_game, 1)
     assert ui._blit_shield(carrier) > 0
     carrier.hit(carrier.MAX_SHIELD)
-    assert ui._blit_shield(carrier) == 0
+    assert ui._blit_shield(carrier) > 0, "an empty bar while it is down: it comes back"
 
 
 def test_torpedoes_get_no_armor_bonus_on_a_shield(carrier):

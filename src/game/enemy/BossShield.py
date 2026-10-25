@@ -134,6 +134,11 @@ class BossShield(Sprite):
         ScreenFX.ring((round(center.x), round(center.y)), int(max(a, b) * 1.3), duration=30,
                       colors=(RIM, LIGHT, MID))
 
+    def restore(self) -> None:
+        """ Back online after it broke: a flash, then it recharges """
+        self._broken = False
+        self._glow = 1.0
+
     def update(self) -> None:
         ship = self.ship
         if not ship.alive() or not ship.is_active:
@@ -143,9 +148,6 @@ class BossShield(Sprite):
         if self._count_impact > 0:
             self._count_impact -= 1
         self._glow *= self.BREAK_FADE if self._broken else self.FADE
-        if self._broken and self._glow < 0.02:
-            self.kill()
-            return
         glow = self._glow
         if self.recharging and not self._broken:
             # A slow shimmer while it builds up again
