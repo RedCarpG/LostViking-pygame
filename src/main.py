@@ -4,6 +4,7 @@ import os
 import sys
 import pygame
 from src.game.Game import Game
+from src.setting import IS_WEB
 
 
 def setup_logging():
@@ -17,6 +18,9 @@ def setup_logging():
 async def main():
     setup_logging()
 
+    # The web build mixes the sound on the same thread as the game: a bigger buffer (46 ms)
+    # rides over a slow frame instead of breaking the music up (pygame's default is 11 ms)
+    pygame.mixer.pre_init(44100, -16, 2, 2048 if IS_WEB else 512)
     pygame.init()
     pygame.mixer.init()
     pygame.font.init()

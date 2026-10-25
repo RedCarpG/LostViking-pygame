@@ -140,3 +140,22 @@ def test_no_music_while_the_window_is_in_the_background(menu_game):
     assert game.state == GameState.PAUSED and not music.get_busy(), "and stays paused and silent"
     keyup(game, K_ESCAPE)
     assert game.state == GameState.PLAYING and music.get_busy(), "until RESUME"
+
+
+def test_start_waits_for_the_warm_up_without_freezing(menu_game):
+    from src.game.animation import warmup
+    game = menu_game
+
+    def slow_job():
+        import time
+        for _ in range(30):
+            time.sleep(0.005)
+            yield
+    warmup.add(slow_job())
+    keyup(game, K_RETURN)
+    assert game.state == GameState.INTRO and game.ui_intro.loading, "LOADING while images are made"
+    for _ in range(60):
+        if game.state == GameState.PLAYING:
+            break
+        run(game, 1)
+    assert game.state == GameState.PLAYING and warmup.pending() == 0 and not game.ui_intro.loading

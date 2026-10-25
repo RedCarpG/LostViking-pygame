@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from enum import Enum
 import pygame
 from pygame.locals import QUIT, KEYUP, K_TAB, K_F3, K_ESCAPE, K_p, SRCALPHA, \
@@ -8,7 +9,7 @@ from .custom_events import EVENT_RESTART, EVENT_RESUME, EVENT_START, EVENT_START
 
 from src.helper.image import load_image
 from src.helper.sound import load_music, play_music
-from src.setting import MAIN_VOLUME, SCREEN_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
+from src.setting import MAIN_VOLUME, SCREEN_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT, IS_WEB
 
 from src.game.groups import G_Player1, G_Players, G_BOSS, G_Bomb, G_Enemys, G_Enemy_Bullets, \
     G_Player_Bullets, G_Supplies, G_Effects, G_Texts, G_Beams, G_Scenery
@@ -24,6 +25,20 @@ from src.game.GameSettings import GameSettings
 from src.game.TestMode import TestMode
 from src.util.collide_detect import hit_rect
 
+
+
+log = logging.getLogger(__name__)
+
+def _hide_web_splash():
+    """ Web: the loading screen of the page stays until the game has drawn its first frame
+    (until then the canvas is black), see static/lostviking.tmpl
+    """
+    if IS_WEB:
+        try:
+            import platform
+            platform.window.splash.style.display = "none"
+        except Exception as e:
+            log.warning("Splash screen not hidden: %s", e)
 
 class GameState(Enum):
     INTRO = 0
@@ -49,6 +64,9 @@ class Game:
     MAX_LAG_MS = 250
     # Time per menu frame spent preparing rotations and generated effects (see warmup)
     WARMUP_WORK_MS = 6
+    # When START waits for the warm-up: more work per frame, still short frames (the web
+    # mixes the music on the same thread: a long frame is heard as a gap)
+    LOADING_WORK_MS = 12
 
     # Test mode hitboxes: (group, color, collision ratio used against player bullets / enemy bullets)
     HITBOXES = [
@@ -111,6 +129,8 @@ class Game:
         self.state = GameState.INTRO
         # State to go back to when the settings screen is closed
         self._settings_return_state = GameState.INTRO
+        # START pressed while the warm-up runs: True for test mode (None: not requested)
+        self._round_requested = None
         # Game frames played in the current round (shown on the result screen)
         self._round_frames = 0
         self._count_end_delay = 0
@@ -127,6 +147,7 @@ class Game:
         """
         lag = 0.0
         last = pygame.time.get_ticks()
+        first_frame = True
         while self.running:
             now = pygame.time.get_ticks()
             lag += now - last
@@ -138,6 +159,9 @@ class Game:
                 lag = 0.0
             for i in range(updates):
                 self.step(draw=i == updates - 1)
+            if first_frame:
+                first_frame = False
+                _hide_web_splash()
             self.clock.tick(60)
             # Give control back to the browser each frame (required by pygbag)
             await asyncio.sleep(0)
@@ -202,16 +226,32 @@ class Game:
             elif self.ui_intro.handle_event(event):
                 pass
             elif event.type == EVENT_START:
-                self.start_round(test_mode=False)
+                self._request_round(test_mode=False)
             elif event.type == EVENT_START_TEST:
-                self.start_round(test_mode=True)
+                self._request_round(test_mode=True)
             elif event.type == EVENT_OPEN_SETTINGS:
                 self.open_settings()
 
         G_Players.update()
         self.background.update()
         # Prepare the pixel-art rotations and generated effects while the menu is shown
-        warmup.work(self.WARMUP_WORK_MS)
+        if self._round_requested is None:
+            warmup.work(self.WARMUP_WORK_MS)
+        else:
+            warmup.work(self.LOADING_WORK_MS)
+            if warmup.pending() == 0:
+                test_mode, self._round_requested = self._round_requested, None
+                self.start_round(test_mode)
+
+    def _request_round(self, test_mode: bool):
+        """ START: the round starts once the warm-up is done ("LOADING" shows meanwhile).
+        Doing all the rest at once froze the game for seconds on the web
+        """
+        if warmup.pending() == 0:
+            self.start_round(test_mode)
+        else:
+            self._round_requested = test_mode
+            self.ui_intro.loading = True
 
     def _step_playing(self, events):
         # A hit stop freezes the world for a few frames; the events are still handled
@@ -458,6 +498,7 @@ class Game:
         """ Start a round from the main menu """
         # Images not prepared yet on the menu are made now, not during play
         warmup.finish()
+        self.ui_intro.loading = False
         TestMode.reset()
         TestMode.enabled = test_mode
         # Test mode starts with a safe, empty stage: spawn what you want from the panel

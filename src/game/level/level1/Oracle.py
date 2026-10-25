@@ -63,12 +63,16 @@ def _build():
     result = {"empty": canvas(1, 1)}
     result["preview"] = _beam_preview()
     yield
-    result["beam"] = {step: [_beam(step, f) for f in range(PulsarBeam.FLOW_FRAMES)]
-                      for step in range(1, PulsarBeam.WIDTH_STEPS + 1)}
-    yield
+    result["beam"] = {}
+    for step in range(1, PulsarBeam.WIDTH_STEPS + 1):
+        result["beam"][step] = [_beam(step, f) for f in range(PulsarBeam.FLOW_FRAMES)]
+        yield
     result["ward"] = _ward_sheets()
     yield
-    result["shell"] = [_shell(f) for f in range(StasisShell.FRAMES)]
+    result["shell"] = []
+    for f in range(StasisShell.FRAMES):
+        result["shell"].append(_shell(f))
+        yield
     if _images is None:
         _images = result
 

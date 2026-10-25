@@ -55,6 +55,12 @@ class UIIntro:
         self.best_text = None
         self._render_best()
 
+        # Shown when START waits for the last images to be made (see Game._request_round)
+        self.loading_text = render_text(get_font("IntroHint"), "LOADING", COLOR.WHITE, spacing=1)
+        self.loading_rect = self.loading_text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.71))
+        self.loading = False
+        self._time = 0
+
     def _render_best(self):
         """ Best score under the title (none before the first round) """
         best = GameSettings.best_score
@@ -70,6 +76,9 @@ class UIIntro:
         self.menu.blit()
         for text, rect in self.hints:
             self.surface.blit(text, rect)
+        self._time += 1
+        if self.loading and (self._time // 20) % 2 == 0:
+            self.surface.blit(self.loading_text, self.loading_rect)
 
     def handle_event(self, event):
         if event.type == pygame.KEYUP and event.key == K_ESCAPE and not IS_WEB:
@@ -80,3 +89,4 @@ class UIIntro:
     def reset(self):
         self.menu.reset()
         self._render_best()
+        self.loading = False

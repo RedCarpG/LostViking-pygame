@@ -79,6 +79,10 @@ async def custom_site():
         while not platform.window.MM.UME:
             await asyncio.sleep(.1)
 
+        # Lost Viking: back to the loading look while the game starts (not a black canvas)
+        platform.window.splash.className = ""
+        platform.window.infobox.innerText = "Loading"
+
     # start async top level machinery if not started and add a console in any case if requested.
     await TopLevel_async_handler.start_toplevel(platform.shell, console=window.python.config.debug)
 
@@ -95,9 +99,8 @@ async def custom_site():
     # if you don't reach that step
     # your main.py has an infinite sync loop somewhere !
 
-    platform.window.infobox.style.display = "none"
-    # Lost Viking: the game is running, remove the splash screen
-    platform.window.splash.style.display = "none"
+    # Lost Viking: the splash screen stays until the game has drawn its first frame
+    # (the game hides it, see _hide_web_splash in src/game/Game.py)
     platform.window.config.gui_divider = 1
     platform.window.window_resize()
     print("default.tmpl: done")

@@ -75,13 +75,17 @@ def _build():
     result["vignette"] = vignette
     yield
     result["stripes"] = _make_stripes()
+    yield
     # The font is drawn small and scaled 2x: same pixel look, and the glow is much faster to draw
     load_font("Silkscreen-Bold.ttf", 32, "MenuTitle")
     load_font("Silkscreen-Regular.ttf", 24, "MenuText")
     title = render_text(get_font("MenuTitle"), "WARNING", (255, 236, 236), spacing=1, glow_color=BANNER_RED)
     result["title"] = upscale(title, 2)
     yield
-    result["subtitles"] = {text: _render_subtitle(text) for text in BANNER_SUBTITLES}
+    result["subtitles"] = {}
+    for text in BANNER_SUBTITLES:
+        result["subtitles"][text] = _render_subtitle(text)
+        yield
     back = pygame.Surface((SCREEN_WIDTH, BANNER_HEIGHT), pygame.SRCALPHA)
     back.fill(BANNER_BACK)
     result["back"] = back
@@ -101,17 +105,23 @@ def prepare_titles(titles) -> None:
     """ Draw the (title, subtitle) texts of stage titles ahead of time (see warmup) """
     for title in titles:
         if title not in _titles:
-            warmup.add(lambda title=title: _title_images(title))
+            warmup.add(_draw_title(title))
+
+
+def _draw_title(title):
+    """ Generator: the title, then the subtitle (two warm-up steps) """
+    text, subtitle = title
+    big = render_text(get_font("MenuTitle"), text, TITLE_COLOR, spacing=1, glow_color=TITLE_GLOW)
+    yield
+    small = render_text(get_font("MenuText"), subtitle, SUBTITLE_COLOR, spacing=1, shadow=True)
+    _titles.setdefault(title, (big, small))
 
 
 def _title_images(title):
-    images = _titles.get(title)
-    if images is None:
-        text, subtitle = title
-        images = (render_text(get_font("MenuTitle"), text, TITLE_COLOR, spacing=1, glow_color=TITLE_GLOW),
-                  render_text(get_font("MenuText"), subtitle, SUBTITLE_COLOR, spacing=1, shadow=True))
-        _titles[title] = images
-    return images
+    if title not in _titles:
+        for _ in _draw_title(title):
+            pass
+    return _titles[title]
 
 
 def _make_vignette():
@@ -137,7 +147,7 @@ def _make_vignette():
             level = int(t ** 1.7 * VIGNETTE_STEPS + dither(x, y) - 0.5)
             if level > 0:
                 art.set_at((x, y), (*VIGNETTE_COLOR, VIGNETTE_ALPHA * min(level, VIGNETTE_STEPS) // VIGNETTE_STEPS))
-        if y % 25 == 0:
+        if y % 6 == 0:
             yield None
     full = upscale(art)
     edge = band * PIXEL
