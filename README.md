@@ -95,3 +95,7 @@ python -m pytest
 `python tools/bench.py [frames] [--boss-at FRAME] [--god]` lets a bot play a round headless and prints the
 time of the update and draw of each frame (mean, 95th percentile, worst). Set `LOSTVIKING_DEBUG=1` to log every
 loaded asset and spawned enemy.
+
+The art is chibi pixel art (round shapes, cel shading, big 2x pixels, a white rim around ships and
+targets), made by the generators in `tools/pixel_art` (see its README); the screenshots above show
+the earlier art.
