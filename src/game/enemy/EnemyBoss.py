@@ -51,8 +51,10 @@ class EnemyBoss(EnemyI):
     # Flying into the boss destroys the player, the boss only takes some damage
     COLLIDE_SELF_DAMAGE = 500
     KNOCKBACK = 0
-    # A boss is hit all the time: a soft flash, so its art still shows
+    # A boss is hit all the time: a soft flash, and the red overlay only when a burst starts,
+    # so its art still shows
     FLASH_COLOR = (56, 56, 56)
+    HIT_OVERLAY_QUIET = 30
 
     def __init__(self, frames, frame_size: Size, **kwargs):
         super().__init__(pos=Pos([0, 0]), frames=frames,

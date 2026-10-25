@@ -42,6 +42,9 @@ class EnemyI(AnimeSprite, BasicEnemy):
     FLASH_DURATION = 3
     FLASH_COLOR = (190, 190, 190)
     KNOCKBACK = 2
+    # The red hit overlay starts again with every hit. With HIT_OVERLAY_QUIET it only shows on a
+    # hit after that many frames without one (a big ship under fire would stay red)
+    HIT_OVERLAY_QUIET = 0
 
     # Explosion when destroyed (see Explosion.SIZES)
     EXPLOSION = "medium"
@@ -74,12 +77,14 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self._normal_image = None
         self._flash_image = None
         self._hit_effect = None
+        self._count_since_hit = self.HIT_OVERLAY_QUIET
 
     # --------------- Super Methods Override --------------- #
 
     def update(self, *args, **kwargs) -> None:
         """ Update method from Sprite, is called per frame """
         super().update()
+        self._count_since_hit += 1
         self._move()
         if self.is_active:
             self.action(*args, **kwargs)
@@ -122,9 +127,12 @@ class EnemyI(AnimeSprite, BasicEnemy):
         if self._health > 0:
             # Get Hit effect (restarted by the next hits: stacking copies of a big ship
             # sheet cost a lot of drawing and looked no different)
+            quiet = self._count_since_hit >= self.HIT_OVERLAY_QUIET
+            self._count_since_hit = 0
             if self._hit_effect is not None and self._hit_effect.alive():
-                self._hit_effect.set_anime_state("IDLE")
-            else:
+                if not self.HIT_OVERLAY_QUIET:
+                    self._hit_effect.set_anime_state("IDLE")
+            elif quiet:
                 self._hit_effect = AttachEffect(
                     self,
                     frames={

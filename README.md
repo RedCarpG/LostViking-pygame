@@ -1,5 +1,14 @@
 # Pygame-LostViking
 
+[![CI](https://github.com/RedCarpG/LostViking-pygame/actions/workflows/ci.yml/badge.svg)](https://github.com/RedCarpG/LostViking-pygame/actions/workflows/ci.yml)
+
+### [▶ Play it in your browser](https://redcarpg.github.io/LostViking-pygame/)
+
+[<img src="docs/media/title.png" width="360" alt="Title screen">](https://redcarpg.github.io/LostViking-pygame/)
+
+Desktop browser with a keyboard (Chrome, Edge or Firefox). The first load takes a moment: it
+downloads the Python runtime and the game.
+
 A StarCraft II themed vertical shooter: fly a Terran Viking from a Terran Starport, through an
 asteroid field and the Protoss outposts, to the Protoss Stargate and its Carrier. See the
 [game intro](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/README.md)
@@ -12,11 +21,21 @@ asteroid field and the Protoss outposts, to the Protoss Stargate and its Carrier
 <img src="https://github.com/RedCarpG/DOCS/blob/main/lost_viking/route_6_carrier.png?raw=true" width="49%" alt="Carrier">
 </p>
 
+In motion:
+
+<p>
+<img src="docs/media/patrol.gif" width="49%" alt="Protoss patrol: Scout formations and a Phoenix">
+<img src="docs/media/outposts.gif" width="49%" alt="Protoss outposts: Lanzer Torpedoes against a Pylon and its Photon Cannons">
+<img src="docs/media/boss.gif" width="49%" alt="The Carrier: a ring of orbs, then its laser sweeping toward the Viking">
+<img src="docs/media/boss_death.gif" width="49%" alt="The Carrier explodes">
+</p>
+
 ## Run
 
-Desktop (Python 3.9+ with pygame):
+Desktop (Python 3.10 with pygame 2.1 or later):
 
 ```bash
+pip install -r requirements.txt
 python LostViking.py
 ```
 
@@ -90,14 +109,41 @@ level up the weapon, add bombs and lives, god mode, turn automatic spawning off 
 a rock or a platform, "Stargate" starts the boss fight, "Next stage" jumps along the route.
 Test mode scores do not count as best score.
 
+## Technical highlights
+
+- **One codebase for the desktop and the browser.** The game runs in WebAssembly through
+  [pygbag](https://pypi.org/project/pygbag/): the main loop is `async` and gives control back to
+  the browser every frame. The web build keeps the settings in `localStorage`, stops the sound when
+  the tab is hidden, and has its own pixel-art loading page.
+- **Fixed-timestep game loop.** The logic runs 60 times per second of real time: after a slow frame
+  the missed updates run without drawing, and a long freeze (a hidden tab) is skipped instead of
+  fast-forwarded.
+- **Pixel art drawn in code**, on the same 2x pixel grid as the sprites:
+  - **Effects:** explosions (value noise and ordered dithering, fire cooling into smoke), the
+    Carrier laser, the Graviton and Pulsar beams, warp-ins, screen flashes.
+  - **Planets:** a random planet each time one appears (five kinds, lit, with craters, storms and
+    rings).
+  - **Sprites:** generators for the chibi sprites.
+  - **No first-use stutter:** slow images are made ahead of time, a little each frame.
+- **RotSprite rotation** in 32 directions for the ships that turn: pixel outlines stay clean.
+- **Game feel:** hit stop, trauma-based screen shake (the HUD stays still), hit flashes and smooth
+  steering for enemies and supplies.
+
 ## Development
 
-Tests run without a window or a sound card:
+Tests run without a window or a sound card (SDL dummy drivers). They drive the real game: menus,
+whole rounds, every stage, the bosses and the effects.
 
 ```bash
-pip install pytest
+pip install -r requirements-dev.txt
 python -m pytest
 ```
+
+GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the tests on every
+push and pull request. On `main` it then builds the web version with pygbag and publishes it to
+GitHub Pages.
+
+The GIFs in this README are recorded headless by `python tools/record_gifs.py` (needs Pillow).
 
 `python tools/bench.py [frames] [--boss-at FRAME] [--god]` lets a bot play a round headless and prints the
 time of the update and draw of each frame (mean, 95th percentile, worst). Set `LOSTVIKING_DEBUG=1` to log every

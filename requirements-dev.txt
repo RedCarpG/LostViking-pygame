@@ -1,0 +1,3 @@
+# Tests (CI runs them with these exact versions)
+pygame==2.1.2
+pytest>=7.1
