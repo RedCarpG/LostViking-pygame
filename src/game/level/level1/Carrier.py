@@ -12,6 +12,7 @@ from .Interceptor import EnemyInterceptor
 from . import CarrierLaser
 from .CarrierLaser import LaserCarrier
 from .WarpIn import WarpIn
+from src.game.enemy.BossShield import prepare as prepare_shield
 from src.game.groups import G_Player1
 
 
@@ -26,6 +27,11 @@ class EnemyCarrier(EnemyBoss):
     STOP_TOP = -150
 
     ARMORED = True
+
+    # Its shield: about 4 s of steady gatling fire at weapon level 3 to break, back to full
+    # in about 8 s when it is left alone (see EnemyBoss)
+    MAX_SHIELD = 6000
+    SHIELD_REGEN = 12
 
     MAX_INTERCEPTOR_NUMBER = 9
 
@@ -77,8 +83,10 @@ class EnemyCarrier(EnemyBoss):
 
     @classmethod
     def prepare(cls):
-        """ Make the laser images ahead of time (see CarrierLaser) """
+        """ Make the laser and shield images ahead of time (see CarrierLaser, BossShield) """
         CarrierLaser.prepare()
+        sheet = _sheet("CarrierNormal")
+        prepare_shield((sheet.get_width() // 6, sheet.get_height()))
 
     @classmethod
     def warp_frame(cls):

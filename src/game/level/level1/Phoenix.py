@@ -81,7 +81,7 @@ class EnemyPhoenix(EnemyII):
             return False
         self._count_regen_delay = self.SHIELD_REGEN_DELAY
         self.status_bar.show()
-        if self.shield > 0:
+        if self.shield > 0 and not kwargs.get("ignore_shield"):
             self.shield -= damage
             play_sound("SHIELD")
             if self.shield <= 0:

@@ -5,9 +5,11 @@ from src.util.type import Pos, Size
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.util.inertial import decelerate, accelerate
 from src.game.groups import G_BOSS, G_Player1
-from src.game.animation import Explosion, Spark, ScreenShake, HitStop, ScreenFX
+from src.game.animation import Explosion, Spark, ScreenShake, HitStop, ScreenFX, FloatingText
+from src.game.animation.FloatingText import WARNING_COLOR
 from src.helper.sound import play_sound
 from .EnemyI import EnemyI
+from .BossShield import BossShield
 
 
 class BossActionPhase(Enum):
@@ -56,6 +58,13 @@ class EnemyBoss(EnemyI):
     FLASH_COLOR = (56, 56, 56)
     HIT_OVERLAY_QUIET = 30
 
+    # Energy shield (0: none). It takes the hits first and recharges after SHIELD_REGEN_DELAY
+    # frames without a hit, SHIELD_REGEN points per frame; once broken (0) it is gone for good
+    MAX_SHIELD = 0
+    SHIELD_REGEN = 0
+    SHIELD_REGEN_DELAY = 120
+    SHAKE_SHIELD_BREAK = 0.5
+
     def __init__(self, frames, frame_size: Size, **kwargs):
         super().__init__(pos=Pos([0, 0]), frames=frames,
                          frame_size=frame_size, **kwargs)
@@ -71,8 +80,57 @@ class EnemyBoss(EnemyI):
         self.enter_action_move_down_phase()
         self._count_dying = 0
 
+        self.shield = self.MAX_SHIELD
+        self._count_shield_regen = 0
+        self.shield_effect = BossShield(self) if self.MAX_SHIELD else None
+
+    # -------------------- Shield --------------------
+    def hit(self, damage=100, target=None, **kwargs) -> bool:
+        """ The shield takes the hits while it lasts (a nuke goes through: `ignore_shield`) """
+        if not self.is_active:
+            return False
+        if self.shield > 0 and not kwargs.get("ignore_shield"):
+            self._hit_shield(damage, kwargs.get("hit_pos"))
+            return True
+        return super().hit(damage, target=target, **kwargs)
+
+    def shield_contains(self, point) -> bool:
+        """ True if `point` is inside the shield (wider than the hull: shots stop at its edge) """
+        if self.shield <= 0 or self.shield_effect is None:
+            return False
+        a, b = self.shield_effect.semi_axes
+        dx = (point[0] - self.rect.centerx) / a
+        dy = (point[1] - self.rect.centery) / b
+        return dx * dx + dy * dy <= 1
+
+    def _hit_shield(self, damage, hit_pos) -> None:
+        self._count_shield_regen = self.SHIELD_REGEN_DELAY
+        self.shield = max(0, self.shield - damage)
+        play_sound("SHIELD")
+        self.shield_effect.impact(hit_pos)
+        if self.shield == 0:
+            self._break_shield()
+
+    def _break_shield(self) -> None:
+        self.shield_effect.burst()
+        ScreenShake.add(self.SHAKE_SHIELD_BREAK)
+        play_sound("POWER_DOWN")
+        FloatingText((self.rect.centerx, self.rect.bottom + 30), "SHIELD DOWN", WARNING_COLOR, duration=90)
+
+    def _regenerate_shield(self) -> None:
+        """ Recharges after a while without a hit, unless it was broken """
+        recharging = 0 < self.shield < self.MAX_SHIELD and self._count_shield_regen == 0
+        if self._count_shield_regen > 0:
+            self._count_shield_regen -= 1
+        elif recharging:
+            self.shield = min(self.MAX_SHIELD, self.shield + self.SHIELD_REGEN)
+        if self.shield_effect is not None:
+            self.shield_effect.recharging = recharging
+
     # -------------------- Main action states --------------------
     def action(self):
+        if self.MAX_SHIELD:
+            self._regenerate_shield()
         if self.state == BossActionPhase.MoveDown:
             self._action_move_down()
         else:

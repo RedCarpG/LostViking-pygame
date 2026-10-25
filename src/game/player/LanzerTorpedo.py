@@ -221,7 +221,9 @@ class LanzerTorpedo(PlayerBullet):
 
     # --------------- Hits --------------- #
     def damage_to(self, enemy) -> int:
-        return self.damage + (self.ARMOR_BONUS if getattr(enemy, "ARMORED", False) else 0)
+        # A shield takes no armor bonus: it is not armor (the gatling is better against shields)
+        armored = getattr(enemy, "ARMORED", False) and getattr(enemy, "shield", 0) <= 0
+        return self.damage + (self.ARMOR_BONUS if armored else 0)
 
     def collide_enemy(self, enemy_group):
         # Still in the pod's drop: it can not hit yet

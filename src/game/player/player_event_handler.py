@@ -29,7 +29,8 @@ def _handle_player_bomb_explode_event(player: PlayerPlane):
     from src.game.groups import G_Enemys, G_Enemy_Bullets
     for each in G_Enemys:
         if each.is_active:
-            each.hit(1000)
+            # The blast goes through shields
+            each.hit(1000, ignore_shield=True)
             if not each.is_active:
                 player.credit_kill(each)
 

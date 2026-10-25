@@ -274,7 +274,8 @@ def test_the_stargate_warps_out_the_carrier_before_it_falls(round_game):
     # The boss bar now shows the Carrier
     run(round_game, 1)
     assert round_game.ui.ui_boss.health_bar.max_health == EnemyCarrier.MAX_HEALTH
-    # Destroying the Carrier wins the level
+    # Destroying the Carrier wins the level (its shield already broken)
+    carrier.shield = 0
     carrier.hit(carrier.MAX_HEALTH)
     for _ in range(carrier.DEATH_DURATION + 200 + round_game.END_DELAY):
         run(round_game, 1)

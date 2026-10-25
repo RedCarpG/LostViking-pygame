@@ -109,6 +109,7 @@ def test_continuous_fire_does_not_paint_the_carrier_red(round_game, carrier):
     def overlay():
         return any(isinstance(s, AttachEffect) and s.ref is carrier and s.frames["IDLE"] is carrier.frames["HIT"]
                    for s in G_Effects)
+    carrier.shield = 0      # already broken: the hits reach the hull
     red = 0
     for _ in range(180):
         carrier.hit(10)
@@ -122,6 +123,7 @@ def test_continuous_fire_does_not_paint_the_carrier_red(round_game, carrier):
 
 def test_the_carrier_explodes_all_over_before_it_falls(round_game, carrier):
     round_game.player.set_pos((800, 900))
+    carrier.shield = 0      # already broken: the hits reach the hull
     carrier.hit(carrier.MAX_HEALTH)
     assert carrier.dying and carrier.alive()
     explosions = set()
@@ -131,3 +133,88 @@ def test_the_carrier_explodes_all_over_before_it_falls(round_game, carrier):
     assert carrier.alive() and len(explosions) >= 12
     run(round_game, 1 + carrier.HITSTOP_FINAL_BLAST)
     assert carrier.current_state == "DESTROY", "then the last blast"
+
+
+# --------------- The Carrier's shield --------------- #
+def test_the_shield_takes_the_hits_first(round_game, carrier):
+    from src.game.animation import Spark
+    carrier.hit(500, hit_pos=(carrier.rect.centerx, carrier.rect.bottom))
+    assert carrier.shield == carrier.MAX_SHIELD - 500 and carrier.health == carrier.MAX_HEALTH
+    assert any(isinstance(s, Spark) for s in G_Effects), "sparks fly off the shield"
+    run(round_game, 1)
+    assert carrier.shield_effect.image.get_width() > carrier.rect.width, "the shield shows around the hull"
+
+
+def test_the_shield_recharges_after_a_pause(round_game, carrier):
+    carrier.hit(3000)
+    run(round_game, carrier.SHIELD_REGEN_DELAY - 5)
+    assert carrier.shield == carrier.MAX_SHIELD - 3000, "not while it is under fire"
+    run(round_game, 30)
+    assert carrier.shield > carrier.MAX_SHIELD - 3000 and carrier.shield_effect.recharging
+    run(round_game, 600)
+    assert carrier.shield == carrier.MAX_SHIELD
+
+
+def test_a_broken_shield_stays_down(round_game, carrier, monkeypatch):
+    import sys
+    texts = []
+    boss_module = sys.modules["src.game.enemy.EnemyBoss"]
+    real_text = boss_module.FloatingText
+    monkeypatch.setattr(boss_module, "FloatingText", lambda pos, text, *a, **k: (texts.append(text), real_text(pos, text, *a, **k)))
+    carrier.hit(carrier.MAX_SHIELD)
+    assert carrier.shield == 0 and carrier.health == carrier.MAX_HEALTH
+    assert texts == ["SHIELD DOWN"]
+    run(round_game, carrier.SHIELD_REGEN_DELAY + 300)
+    assert carrier.shield == 0, "no recharge once broken"
+    carrier.hit(100)
+    assert carrier.health == carrier.MAX_HEALTH - 100
+
+
+def test_the_shield_bar_shows_until_the_shield_breaks(round_game, carrier):
+    ui = round_game.ui.ui_boss
+    run(round_game, 1)
+    assert ui._blit_shield(carrier) > 0
+    carrier.hit(carrier.MAX_SHIELD)
+    assert ui._blit_shield(carrier) == 0
+
+
+def test_torpedoes_get_no_armor_bonus_on_a_shield(carrier):
+    from types import SimpleNamespace
+    from src.game.player.LanzerTorpedo import LanzerTorpedo
+    torpedo = SimpleNamespace(damage=110, ARMOR_BONUS=LanzerTorpedo.ARMOR_BONUS)
+    assert LanzerTorpedo.damage_to(torpedo, carrier) == 110
+    carrier.shield = 0
+    assert LanzerTorpedo.damage_to(torpedo, carrier) == 110 + LanzerTorpedo.ARMOR_BONUS
+
+
+def test_the_nuke_goes_through_shields(round_game, carrier):
+    import pygame
+    from src.game.custom_events import EVENT_BOMB_EXPLODE
+    from src.game.level.level1 import EnemyPhoenix
+    from src.util.type import Pos
+    phoenix = EnemyPhoenix(Pos([200, 400]), is_left=True)
+    assert phoenix.shield == phoenix.MAX_SHIELD
+    pygame.event.post(pygame.event.Event(EVENT_BOMB_EXPLODE, {"player": round_game.player}))
+    run(round_game, 1)
+    assert not phoenix.is_active, "a shielded Phoenix does not survive a nuke"
+    assert carrier.shield == carrier.MAX_SHIELD and carrier.health == carrier.MAX_HEALTH - 1000
+
+
+def test_shots_stop_at_the_edge_of_the_shield(round_game, carrier):
+    from pygame import Vector2
+    from src.game.player.PlayerViking import PlayerBulletViking
+    from src.util.type import Pos
+    edge = carrier.shield_effect.edge_point((carrier.rect.centerx, 2000))
+    # Just inside the shield, below the hull
+    bullet = PlayerBulletViking(Pos([round(edge.x), round(edge.y) - 4]), Vector2(0, -17), 80,
+                                player=round_game.player)
+    assert bullet.rect.top > carrier.rect.bottom
+    bullet.collide_enemy(G_Enemys)
+    assert not bullet.alive() and carrier.shield == carrier.MAX_SHIELD - 80
+    # Once the shield is down, the same place is empty space
+    carrier.shield = 0
+    bullet = PlayerBulletViking(Pos([round(edge.x), round(edge.y) - 4]), Vector2(0, -17), 80,
+                                player=round_game.player)
+    bullet.collide_enemy(G_Enemys)
+    assert bullet.alive()
+    bullet.kill()

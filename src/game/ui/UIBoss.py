@@ -15,6 +15,12 @@ class UIBoss:
     ENRAGED_COLORS = ((236, 110, 36), (255, 170, 80))
     NAME_COLOR = (214, 226, 255)
     BAR_RECT = pygame.Rect(36, 16, 470, 18)
+    # Shield bar under the panel, for a boss with a shield (hidden once it is broken)
+    SHIELD_SIZE = (470, 8)
+    SHIELD_OUTLINE = (20, 26, 60)
+    SHIELD_EMPTY = (30, 44, 92)
+    SHIELD_COLOR = (90, 196, 255)
+    SHIELD_LIGHT = (200, 242, 255)
 
     def __init__(self, surface) -> None:
 
@@ -75,10 +81,29 @@ class UIBoss:
             else:
                 self.state = UIState.Hidden
 
+    def _blit_shield(self, boss) -> int:
+        """ Draw the shield bar under the panel, :return: the height it takes """
+        max_shield = getattr(boss, "MAX_SHIELD", 0)
+        if not max_shield or boss.shield <= 0:
+            return 0
+        width, height = self.SHIELD_SIZE
+        rect = pygame.Rect(0, 0, width, height)
+        rect.midtop = (SCREEN_WIDTH // 2, self.ui_boss_rect.bottom + 2)
+        self.surface.fill(self.SHIELD_OUTLINE, rect)
+        inner = rect.inflate(-4, -4)
+        self.surface.fill(self.SHIELD_EMPTY, inner)
+        # Whole 2 px steps, like the art
+        filled = inner.width * boss.shield // max_shield // 2 * 2
+        if filled > 0:
+            self.surface.fill(self.SHIELD_COLOR, (inner.left, inner.top, filled, inner.height))
+            self.surface.fill(self.SHIELD_LIGHT, (inner.left, inner.top, filled, 2))
+        return height + 2
+
     def blit(self):
         if self.boss_g.sprite is not None:
             self.health_bar.blit()
             self.ui_boss.blit(self.health_bar_img, self.health_bar_img_rect)
             self.surface.blit(self.ui_boss, self.ui_boss_rect)
+            below = self.ui_boss_rect.bottom + self._blit_shield(self.boss_g.sprite)
             if self._name is not None:
-                self.surface.blit(self._name, self._name.get_rect(midtop=(SCREEN_WIDTH // 2, self.ui_boss_rect.bottom + 4)))
+                self.surface.blit(self._name, self._name.get_rect(midtop=(SCREEN_WIDTH // 2, below + 4)))

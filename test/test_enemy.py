@@ -63,6 +63,7 @@ def test_boss_arrival_and_enrage(round_game):
     assert round_game.level._count_boss_music > 0
     run(round_game, 200)
     assert round_game.level._count_boss_music == 0
+    boss.shield = 0     # already broken: the hits reach the hull
     boss.hit(boss.MAX_HEALTH // 2 + 1)
     run(round_game, 1)
     assert boss.enraged and boss._enrage_shown
@@ -75,6 +76,7 @@ def test_boss_death_ends_the_round_in_victory(round_game):
     round_game.level.spawn_carrier()
     run(round_game, 100)
     boss = G_BOSS.sprite
+    boss.shield = 0     # already broken: the hits reach the hull
     boss.hit(boss.MAX_HEALTH)
     for _ in range(boss.DEATH_DURATION + 200 + round_game.END_DELAY):
         run(round_game, 1)

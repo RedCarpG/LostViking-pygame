@@ -6,7 +6,7 @@ from pygame.sprite import spritecollide
 from abc import ABC, abstractmethod
 from src.util.type import Pos
 from src.util import if_in_screen, collide_detect
-from src.game.groups import G_Enemys, G_Player_Bullets
+from src.game.groups import G_Enemys, G_Player_Bullets, G_BOSS
 from src.game.player import PlayerPlane
 
 
@@ -120,7 +120,12 @@ class PlayerBullet(pygame.sprite.Sprite, ABC):
         self.rect.move_ip(self.speed.x, self.speed.y)
 
     def collide_enemy(self, enemy_group):
-        for enemy in spritecollide(self, enemy_group, False, collide_detect(0.8)):
+        enemies = spritecollide(self, enemy_group, False, collide_detect(0.8))
+        # A boss shield is wider than the hull: the shot stops at its edge
+        boss = G_BOSS.sprite
+        if boss is not None and boss not in enemies and boss.is_active                 and getattr(boss, "shield_contains", lambda point: False)(self.rect.center):
+            enemies.append(boss)
+        for enemy in enemies:
             if not enemy.is_active or enemy in self._pierced:
                 continue
             shielded = getattr(enemy, "shield", 0) > 0

@@ -51,12 +51,39 @@ _music_base_volume = 0.0
 _volume_scale = {"sound": 1.0, "music": 1.0}
 
 
+# Sounds that come in bursts (every bullet that hits, every ship a nuke destroys): no sound of a
+# group starts within its min interval after the last one of the group started, and at most
+# `limit` sounds of the group play at once. Restarting the hit sound for every bullet made a harsh buzz, and a
+# nuke a wall of explosions. {group: (labels, limit, min interval in ms)}
+SOUND_GROUPS = {
+    "hit": (("ENEMY_HIT", "SHIELD"), 2, 90),
+    "destroy": (("ENEMY_DESTROY", "SCOUT_DESTROY", "PHOENIX_DESTROY"), 2, 120),
+}
+_group_of = {label: group for group, (labels, _, _) in SOUND_GROUPS.items() for label in labels}
+_last_start = {}
+
+
+def _playing(labels) -> int:
+    """ How many copies of these sounds are playing now """
+    return sum(getattr(_SOUND[label], "get_num_channels", lambda: 0)() for label in labels)
+
+
 def play_sound(label):
     """ Play sound from _SOUND dictionary which is previously loaded
     :param label: Name tag of the sound effect
     """
     sound = _SOUND[label]
-    sound.stop()
+    group = _group_of.get(label)
+    if group is None:
+        sound.stop()
+        sound.play()
+        return
+    labels, limit, min_interval = SOUND_GROUPS[group]
+    now = pygame.time.get_ticks()
+    if now - _last_start.get(group, -min_interval) < min_interval or _playing(labels) >= limit:
+        return
+    _last_start[group] = now
+    # Not stopped first: the copy already playing ends on its own (no cut, no click)
     sound.play()
 
 
