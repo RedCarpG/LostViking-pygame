@@ -56,7 +56,7 @@ They are saved with the best score in `settings.json` (desktop) or the browser s
   - **Pulsar Beam**: the Oracle stops above you, a dashed line shows the beam charging, then it burns
     and follows you slowly. Move sideways.
   - **Stasis Ward**: dropped ahead of you, faint at first; once armed a dashed ring turns around it.
-    Touching an armed ward freezes you in a crystal for over a second: no move, no shot, no bomb,
+    Touching an armed ward freezes you in a crystal for almost a second: no move, no shot, no bomb,
     but no damage either. Shoot the wards down.
 - The Carrier gets angry below half health: its attacks come faster.
 

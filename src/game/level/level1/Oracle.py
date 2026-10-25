@@ -507,7 +507,7 @@ class StasisWard(EnemyI):
     LIFETIME = 720
     # Pixels per frame it drifts down
     DRIFT = 0.3
-    STASIS_FRAMES = 80
+    STASIS_FRAMES = 50
 
     GROUP = Group()
 
