@@ -39,13 +39,27 @@ They are saved with the best score in `settings.json` (desktop) or the browser s
 
 ## Gameplay
 
-- Survive the waves of Scouts, Phoenixes and Oracles until the Carrier comes (a WARNING tells you), then destroy it.
+The Viking flies from a Terran Starport to a Protoss Stargate. The route, shown on the left edge
+of the screen, has stages, each announced by its name:
+
+1. **Launch**: the Viking takes off from the launch pad of the Terran Starport.
+2. **Asteroid field**: spinning rocks drift down, a large rock breaks into two medium rocks, a medium
+   rock into two small ones. Flying into a rock hurts. Large and medium rocks are armored.
+3. **Protoss patrol**: Scout formations, Phoenixes, an Oracle.
+4. **Protoss outposts**: floating platforms with a **Pylon** and **Photon Cannons** (fixed turrets
+   firing at you). The Pylon powers the cannons of its platform: destroy it and they go dark.
+   Destroy everything on a platform for a bonus. You fly over the structures (they do not ram you).
+5. **Stargate** (WARNING): it builds ships (Scouts warp out of its portal, an Oracle, Phoenixes),
+   releases rings of photon orbs, and two cannons stand on its wings. Before it falls it warps out
+   the **Carrier**, then blows up.
+6. **Carrier**: destroy it to win.
+
 - Two weapons, as the StarCraft II Viking, switched with E (no shot while the Viking transforms):
   - **Twin gatling**: fast straight shots, the best against light ships (Interceptors, Phoenixes) and shields.
     From weapon level 4 its shots turn green and go through ships: one ship at level 4, two at level 5,
     30% less damage after each. A shield stops them.
-  - **Lanzer Torpedoes**: homing torpedoes in salvos of pairs, extra damage against armored ships
-    (Scouts, the Carrier).
+  - **Lanzer Torpedoes**: homing torpedoes in salvos of pairs, extra damage against armored targets
+    (Scouts, Oracles, large and medium rocks, structures, the Carrier).
 - Supplies: weapon upgrade (5 levels, for both weapons), nuclear bomb, repair (or one more life when not damaged).
   They blink before they leave and fly to you once you are close.
 - Losing a life costs the weapon upgrades: they drop from the wreck, pick them up again.
@@ -65,7 +79,8 @@ They are saved with the best score in `settings.json` (desktop) or the browser s
 Choose **Test Mode** in the main menu to play with a test panel (press `` ` `` to show / hide it).
 Each action has a key and can also be clicked: spawn any enemy or the boss, damage the boss,
 level up the weapon, add bombs and lives, god mode, turn automatic spawning off and show hitboxes.
-"Scout wave" brings a random Scout formation, "Oracle" warps one in.
+"Scout wave" brings a random Scout formation, "Oracle" warps one in, "Asteroid" and "Outpost" bring
+a rock or a platform, "Stargate" starts the boss fight, "Next stage" jumps along the route.
 Test mode scores do not count as best score.
 
 ## Development

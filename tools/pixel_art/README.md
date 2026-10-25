@@ -6,6 +6,8 @@ The game uses a pixel-art style: hard edges, small palettes, no smooth gradients
 | --- | --- |
 | Ships and enemies (`src/asset/image/Enemy`, `PlayerPlane`, ...) | Original pixel art, drawn at 1x |
 | Oracle (`src/asset/image/Enemy/Oracle`) | `make_oracle.py`, 1x, 6 frames per sheet |
+| Asteroids (`src/asset/image/Enemy/Asteroid`) | `make_asteroids.py`, 16 frames of a turn, lit again in every frame, drawn at 2x |
+| Structures (`src/asset/image/Structure`): Terran Starport, outpost platforms, Pylon, Photon Cannon, Stargate | `make_structures.py`, drawn at 2x |
 | HUD panels, lights and icons (`src/asset/image/UI`) | `make_hud.py`, drawn at half size and scaled 2x |
 | Background nebula (`src/asset/image/Nebula.png`) | `make_nebula.py`, 500x500, drawn at 2x by the game |
 | Text | Silkscreen pixel font (`src/asset/font`, SIL Open Font License), sizes in multiples of 8 |
@@ -17,7 +19,9 @@ The game uses a pixel-art style: hard edges, small palettes, no smooth gradients
 | Muzzle flashes, transform ring | Drawn by the game at 2x (`src/game/animation/MuzzleFlash.py`, `TransformRing.py`) |
 | Lanzer Torpedoes and their smoke | Drawn by the game at 2x, turned with RotSprite (`src/game/player/LanzerTorpedo.py`) |
 | Phoenix Graviton Beam | Drawn by the game on the 2x grid (`src/game/level/level1/GravitonBeam.py`) |
-| Oracle Pulsar Beam, Stasis Ward and crystal, warp-in | Drawn by the game at 2x (`src/game/level/level1/Oracle.py`) |
+| Oracle Pulsar Beam, Stasis Ward and crystal | Drawn by the game at 2x (`src/game/level/level1/Oracle.py`) |
+| Protoss warp-in | Drawn by the game from the ship's shape (`src/game/level/level1/WarpIn.py`) |
+| Route on the left edge, stage titles | Drawn by the game at 2x (`src/game/ui/UIRoute.py`, `ScreenFX.py`) |
 
 The effects drawn by the game share the helpers in `src/game/animation/pixel_fx.py`
 (ordered dither, value noise, nearest-neighbour 2x scaling). Explosions, the laser and the
@@ -32,9 +36,13 @@ Run from the project root (needs `numpy` for the nebula):
 python tools/pixel_art/make_hud.py
 python tools/pixel_art/make_nebula.py
 python tools/pixel_art/make_oracle.py
+python tools/pixel_art/make_asteroids.py
+python tools/pixel_art/make_structures.py
 ```
 
-The stasis sound is made the same way (needs `numpy` and `ffmpeg`): `python tools/sound/make_stasis.py`.
+The sprite generators share their shading helpers (`shading.py`). The synthesized sounds (stasis,
+pylon power-down, Stargate warp surge) are made by `python tools/sound/make_sounds.py`
+(needs `numpy` and `ffmpeg`).
 
 ## Edit them in Aseprite
 
