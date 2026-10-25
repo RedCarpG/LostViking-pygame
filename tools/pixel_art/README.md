@@ -5,6 +5,7 @@ The game uses a pixel-art style: hard edges, small palettes, no smooth gradients
 | What | How it is made |
 | --- | --- |
 | Ships and enemies (`src/asset/image/Enemy`, `PlayerPlane`, ...) | Original pixel art, drawn at 1x |
+| Oracle (`src/asset/image/Enemy/Oracle`) | `make_oracle.py`, 1x, 6 frames per sheet |
 | HUD panels, lights and icons (`src/asset/image/UI`) | `make_hud.py`, drawn at half size and scaled 2x |
 | Background nebula (`src/asset/image/Nebula.png`) | `make_nebula.py`, 500x500, drawn at 2x by the game |
 | Text | Silkscreen pixel font (`src/asset/font`, SIL Open Font License), sizes in multiples of 8 |
@@ -16,6 +17,7 @@ The game uses a pixel-art style: hard edges, small palettes, no smooth gradients
 | Muzzle flashes, transform ring | Drawn by the game at 2x (`src/game/animation/MuzzleFlash.py`, `TransformRing.py`) |
 | Lanzer Torpedoes and their smoke | Drawn by the game at 2x, turned with RotSprite (`src/game/player/LanzerTorpedo.py`) |
 | Phoenix Graviton Beam | Drawn by the game on the 2x grid (`src/game/level/level1/GravitonBeam.py`) |
+| Oracle Pulsar Beam, Stasis Ward and crystal, warp-in | Drawn by the game at 2x (`src/game/level/level1/Oracle.py`) |
 
 The effects drawn by the game share the helpers in `src/game/animation/pixel_fx.py`
 (ordered dither, value noise, nearest-neighbour 2x scaling). Explosions, the laser and the
@@ -29,7 +31,10 @@ Run from the project root (needs `numpy` for the nebula):
 ```bash
 python tools/pixel_art/make_hud.py
 python tools/pixel_art/make_nebula.py
+python tools/pixel_art/make_oracle.py
 ```
+
+The stasis sound is made the same way (needs `numpy` and `ffmpeg`): `python tools/sound/make_stasis.py`.
 
 ## Edit them in Aseprite
 
