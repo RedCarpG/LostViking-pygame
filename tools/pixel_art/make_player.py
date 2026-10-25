@@ -1,9 +1,11 @@
-""" Generate the player's sprite sheets in the chibi style (src/asset/image/PlayerPlane/...,
-and the HUD portraits src/asset/image/UI/Player/Viking*.png)
+""" Draw the player's sprite sheets and HUD portraits in the chibi style (into art/chibi/)
 
-Development tool. The Viking of StarCraft II as a chibi fighter: a round white hull with a red
-nose, a big glass canopy, stubby wings carrying the two red gun pods, red tail fins and two
-engines. Faces up. Sheets (6 frames side by side unless said):
+Development tool. Not used by the game: the Viking, its shots, the nuke and the HUD portraits keep
+their earlier art (in src/asset/image, at screen size). This draws the chibi take on them, at art
+size, into art/chibi/ to compare or to start from.
+The Viking of StarCraft II as a chibi fighter: a round white hull with a red nose, a big glass
+canopy, stubby wings carrying the two red gun pods, red tail fins and two engines. Faces up.
+Sheets (6 frames side by side unless said):
     VikingMoveNormal   engines flickering          VikingMoveUp      engines at full thrust
     VikingBase         the first frame              VikingHit         red flash (3 frames)
     VikingInvincible   white blink                  VikingDestroy     darkening
@@ -25,8 +27,8 @@ from chibi import Art, WHITE, RED, GLASS, STEEL, YELLOW, FLAME, T_OUTLINE, RIM, 
     hit_frames, blink_frames, destroy_frames, save, flame, preview, opaque
 from shading import save_sheet
 
-OUT = "src/asset/image/PlayerPlane"
-UI_OUT = "src/asset/image/UI/Player"
+OUT = "art/chibi/PlayerPlane"
+UI_OUT = "art/chibi/UI/Player"
 
 W, H = 28, 33
 CX = 13.5
@@ -233,7 +235,7 @@ def main():
         return
     for name, frames in sheets.items():
         save(frames, os.path.join(OUT, f"{name}.png"))
-    save(nukes, "src/asset/image/Bomb/NucExplosion.png")
+    save(nukes, "art/chibi/Bomb/NucExplosion.png")
     for name, frames in portraits.items():
         save_sheet(frames, os.path.join(UI_OUT, f"{name}.png"))
 

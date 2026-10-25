@@ -22,8 +22,8 @@ def _sheet(name):
 class EnemyCarrier(EnemyBoss):
     NAME = "CARRIER"
 
-    # The back of the ship stays above the screen
-    STOP_TOP = -110
+    # The top half of the ship stays above the screen
+    STOP_TOP = -150
 
     ARMORED = True
 
@@ -103,7 +103,7 @@ class EnemyCarrier(EnemyBoss):
     @property
     def emitter(self) -> Vector2:
         """ Where bullets come out: the nose of the ship """
-        return Vector2(self.rect.centerx, self.rect.bottom - 30)
+        return Vector2(self.rect.centerx, self.rect.bottom - 40)
 
     def laser_active(self) -> bool:
         return self.laser is not None and self.laser.alive()

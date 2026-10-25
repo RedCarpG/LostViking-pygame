@@ -1,8 +1,9 @@
-""" Generate the enemy bullets in the chibi style (src/asset/image/Enemy/...)
+""" Draw the enemy bullets in the chibi style (into art/chibi/Enemy/)
 
-Development tool. Drawn at art size (the game shows them at 2x). Bullets have a white core,
-a bright body and a dark outline, but no white rim: only ships and objects have it, so a bullet
-never looks like a ship.
+Development tool. Not used by the game: the bullets keep their earlier art (in src/asset/image/Enemy,
+at screen size). This draws the chibi take on them, at art size, into art/chibi/Enemy/ to compare
+or to start from. Bullets have a white core, a bright body and a dark outline, but no white rim:
+only ships and objects have it, so a bullet never looks like a ship.
     laser.png         the Phoenix laser: a long cyan bolt
     Laser2.png        the bolt of the Scouts, Interceptors and the Carrier
     LaserHit.png      where a bolt hits (6 frames)
@@ -18,7 +19,7 @@ import pygame
 
 from chibi import Art, CYAN, VIOLET, ring, save, preview
 
-OUT = "src/asset/image/Enemy"
+OUT = "art/chibi/Enemy"
 DARK = (20, 24, 60)
 ORBS = {
     "Cyan": ((20, 90, 150), (70, 200, 255), (180, 240, 255)),

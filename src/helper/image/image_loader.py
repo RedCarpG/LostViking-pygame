@@ -15,18 +15,18 @@ log = logging.getLogger(__name__)
 _image_dir = os.path.join(os.path.split(os.path.abspath(__file__))[
                           0], '../../asset/image')
 
-# The sprites (ships, bullets, supplies, structures) are drawn at art size and shown at ART_SCALE,
-# like the background: one art pixel is a 2x2 block of screen pixels. Images in these folders are
-# scaled when they are loaded; the art-size image is kept for the pixel-art rotations (art_source)
+# Images drawn at art size and shown at ART_SCALE, like the background: one art pixel is a 2x2 block
+# of screen pixels. They are scaled when they are loaded; the art-size image is kept for the pixel-art
+# rotations (art_source). The other ships, the bullets and the nuke are drawn at screen size
 ART_SCALE = 2
-_ART_FOLDERS = ("PlayerPlane/", "Enemy/", "Supply/", "Structure/", "Bomb/")
+_ART_PREFIXES = ("Supply/", "Structure/", "Enemy/Asteroid/", "Enemy/Oracle/", "Enemy/Carrier/Carrier")
 # Scaled image -> (art-size image, scale)
 _ART = {}
 
 
 def art_scale(filename: str) -> int:
     """ Screen pixels per art pixel of an image file """
-    return ART_SCALE if filename.replace("\\", "/").startswith(_ART_FOLDERS) else 1
+    return ART_SCALE if filename.replace("\\", "/").startswith(_ART_PREFIXES) else 1
 
 
 def art_source(image: pygame.Surface):

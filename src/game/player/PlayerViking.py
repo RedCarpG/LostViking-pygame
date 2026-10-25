@@ -15,10 +15,6 @@ class PlayerViking(PlayerPlane):
     Lanzer Torpedoes (homing, best against armored ships)
     """
 
-    # Around the hull (the image also holds the engine flames below it)
-    HITBOX = (26, 28)
-    HITBOX_OFFSET = (0, -5)
-
     def __init__(self, pos):
         super().__init__(
             weapons=[PlayerWeaponViking(self), PlayerTorpedoViking(self)],
@@ -54,8 +50,8 @@ class PlayerWeaponViking(PlayerWeapon):
 
     SPEED = 17
     # Guns, from the plane center (x) and top (y): the wing pods, and the wing tips (level 5)
-    GUNS = ((-14, 18), (14, 18))
-    WING_GUNS = ((-24, 36), (24, 36))
+    GUNS = ((-11, 10), (11, 10))
+    WING_GUNS = ((-23, 13), (23, 13))
 
     def __init__(self, player: PlayerPlane):
         super().__init__(player)
@@ -104,8 +100,8 @@ class PlayerTorpedoViking(PlayerWeapon):
     # Torpedoes per salvo, by level
     SALVOS = (2, 2, 4, 4, 6)
     # Wing pods, from the plane center (x) and top (y)
-    POD_X = 14
-    POD_Y = 26
+    POD_X = 12
+    POD_Y = 16
 
     def shoot(self, pos: Pos):
         plane = self.player.rect

@@ -259,7 +259,7 @@ class EnemyScout(EnemyI):
 
     def shoot(self, target):
         # Fires where it faces, from its nose
-        nose = Vector2(0, 38).rotate(-self.angle) + self.rect.center
+        nose = Vector2(0, 30).rotate(-self.angle) + self.rect.center
         BulletScout(Pos([nose.x, nose.y]), self.angle)
 
 

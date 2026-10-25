@@ -70,7 +70,7 @@ class EnemyPhoenix(EnemyII):
         if self.graviton is not None:
             return
         # --- Correct the release point of the bullet from attack animation
-        correction = Vector2(0, 46)
+        correction = Vector2(0, 100)
         correction = correction.rotate(-self.angle)
         BulletPhoenix(Pos(correction + self.rect.center), self.angle)
         play_sound("PHOENIX_LASER")

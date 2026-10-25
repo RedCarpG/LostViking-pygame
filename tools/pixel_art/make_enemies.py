@@ -1,7 +1,10 @@
-""" Generate the Protoss ship sheets in the chibi style (src/asset/image/Enemy/...)
+""" Draw the Protoss ship sheets in the chibi style (into art/chibi/Enemy/)
 
-Development tool. Copper hulls, violet plates and cyan energy crystals, faces down (engines at
-the top), drawn at art size (the game shows them at 2x). Each ship has sheets of 6 frames:
+Development tool. Not used by the game: these ships keep their earlier art (in src/asset/image/Enemy,
+the Carrier at art size, the others at screen size); only the Oracle is chibi (make_oracle.py).
+This draws the chibi take on them into art/chibi/Enemy/ to compare or to start from.
+Copper hulls, violet plates and cyan energy crystals, faces down (engines at the top), drawn at
+art size. Each ship has sheets of 6 frames:
     <Ship>Normal / Idle   engines flickering          <Ship>Attack   glints gathering (drawn over the ship)
     <Ship>Hit             red flash (3 frames)         <Ship>Destroy  darkening
     <Ship>Base            the first frame
@@ -20,7 +23,7 @@ import pygame
 from chibi import Art, COPPER, GOLD, VIOLET, CYAN, P_OUTLINE, FRAMES, finish, hit_frames, destroy_frames, save, \
     flame, preview
 
-OUT = "src/asset/image/Enemy"
+OUT = "art/chibi/Enemy"
 HIT_ALPHAS = (170, 120, 70)
 CYAN_FLAME = (CYAN[0], CYAN[1], CYAN[2], CYAN[3])
 

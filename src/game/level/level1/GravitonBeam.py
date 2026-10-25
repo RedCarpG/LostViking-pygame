@@ -81,7 +81,7 @@ class GravitonBeam(Sprite):
     # The plane is caught if its center comes this close to the beam (pixels)
     CATCH_DISTANCE = 26
     # The beam starts this far in front of the Phoenix center
-    NOSE = 24
+    NOSE = 40
     # While lifted: the plane's own speed is scaled by CONTROL, and it is pulled toward the
     # Phoenix at PULL pixels per frame, but not closer than MIN_DISTANCE
     CONTROL = 0.3
