@@ -20,7 +20,7 @@ Offsets in the code (guns, noses, pads) are in screen pixels.
 
 | What | How it is made |
 | --- | --- |
-| The Viking, the other ships, the bullets, the nuke blast, the HUD portraits | Original art |
+| The Viking, the other ships, the bullets, the nuke blast, the HUD portraits | Original art, drawn in Aseprite ([LostViking-pixel_art](https://github.com/RedCarpG/LostViking-pixel_art)) |
 | Oracle | `make_oracle.py` |
 | Supplies and their pickup effects | `make_supplies.py` |
 | Asteroids (16 frames of a turn, lit again in every frame) | `make_asteroids.py` |

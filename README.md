@@ -1,10 +1,16 @@
 # Pygame-LostViking
 
-![img](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/LostViking.png?raw=true)
+A StarCraft II themed vertical shooter: fly a Terran Viking from a Terran Starport, through an
+asteroid field and the Protoss outposts, to the Protoss Stargate and its Carrier. See the
+[game intro](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/README.md)
+([中文介绍](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/README_zh.md)) for more screenshots.
 
-![img](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/LostViking2.png?raw=true)
-
-![img](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/LostViking_pixel.png?raw=true)
+<p>
+<img src="https://github.com/RedCarpG/DOCS/blob/main/lost_viking/route_2_asteroids.png?raw=true" width="49%" alt="Asteroid field">
+<img src="https://github.com/RedCarpG/DOCS/blob/main/lost_viking/route_4_outposts.png?raw=true" width="49%" alt="Protoss outposts">
+<img src="https://github.com/RedCarpG/DOCS/blob/main/lost_viking/route_5_stargate.png?raw=true" width="49%" alt="Stargate">
+<img src="https://github.com/RedCarpG/DOCS/blob/main/lost_viking/route_6_carrier.png?raw=true" width="49%" alt="Carrier">
+</p>
 
 ## Run
 
@@ -98,6 +104,7 @@ time of the update and draw of each frame (mean, 95th percentile, worst). Set `L
 loaded asset and spawned enemy.
 
 The Viking, the Scouts, Interceptors, Phoenixes and the Carrier, the bullets and the nuke keep
-their original art. The Oracle, the asteroids, the structures (Terran Starport, outposts, Stargate)
+their original art, drawn in Aseprite: the sources are in
+[LostViking-pixel_art](https://github.com/RedCarpG/LostViking-pixel_art). The Oracle, the asteroids, the structures (Terran Starport, outposts, Stargate)
 and the supplies are chibi pixel art (round shapes, cel shading, big 2x pixels, a white rim around
 ships and targets), made by the generators in `tools/pixel_art` (see its README).
