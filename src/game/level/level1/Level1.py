@@ -139,14 +139,15 @@ class Level1:
         EnemyCarrier.prepare()
 
         # Pixel-art rotations of the enemies that turn, prepared before play so turning costs
-        # nothing in a round (the Phoenix "Fast" frames only fly at 90 degrees: no rotation needed)
-        for name in ["Normal", "Destroy", "Hit", "Attack"]:
-            queue_rotations(get_image(f"Enemy/Phoenix/Phoenix{name}.png"), 100)
-            queue_rotations(get_image(f"Enemy/Scout/Scout{name}.png"), 53)
-        for name in ["Idle", "Move", "Destroy", "Hit", "Attack"]:
-            queue_rotations(get_image(f"Enemy/Interceptor/Interceptor{name}.png"), 30)
-        for name in ["Normal", "Destroy", "Hit", "Attack"]:
-            queue_rotations(get_image(f"Enemy/Oracle/Oracle{name}.png"), 64)
+        # nothing in a round (the Phoenix "Fast" frames only fly at 90 degrees: no rotation needed).
+        # The frame width is the one of the first sheet (6 frames)
+        for ship, names in (("Phoenix", ("Normal", "Destroy", "Hit", "Attack")),
+                            ("Scout", ("Normal", "Destroy", "Hit", "Attack")),
+                            ("Interceptor", ("Idle", "Move", "Destroy", "Hit", "Attack")),
+                            ("Oracle", ("Normal", "Destroy", "Hit", "Attack"))):
+            width = get_image(f"Enemy/{ship}/{ship}{names[0]}.png").get_width() // 6
+            for name in names:
+                queue_rotations(get_image(f"Enemy/{ship}/{ship}{name}.png"), width)
         # Pulsar beam, stasis ward and stasis crystal images
         Oracle.prepare()
         # Shapes of the ships that warp in, stage titles
