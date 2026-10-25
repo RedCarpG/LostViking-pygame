@@ -83,7 +83,7 @@ class TestPanel:
             TestMode.show_hitboxes = not TestMode.show_hitboxes
 
         header("SPAWN")
-        entry(K_1, "1", lambda: ("Scout", None), lambda: EnemyScout.add_enemy_scout(1))
+        entry(K_1, "1", lambda: ("Scout wave", None), lambda: EnemyScout.spawn_wave())
         entry(K_2, "2", lambda: ("Phoenix", None),
               lambda: EnemyPhoenix.add_enemy_phoenix(side=random.choice(["left", "right"])))
         entry(K_3, "3", lambda: ("Interceptor", None), spawn_interceptor)

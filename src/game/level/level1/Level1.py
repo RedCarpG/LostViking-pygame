@@ -57,6 +57,19 @@ class Level1:
     SPAWN_SPEED_PHOENIX = 2000
     SPAWN_SPEED_CARRIER = 8200
 
+    # Scout formations (see EnemyScout.spawn_wave): weight at the start of the level and when
+    # the boss comes. Formations become more common as the level goes on
+    WAVE_WEIGHTS = {
+        "single": (6, 3),
+        "v": (1, 2),
+        "line": (1, 2),
+        "column": (0.5, 2),
+        "pincer": (0.5, 1.5),
+    }
+    # After a formation of n Scouts the next one waits (n - 1) * FORMATION_PAUSE spawn intervals,
+    # so about as many Scouts come as before
+    FORMATION_PAUSE = 0.9
+
     # When the boss comes the level music fades out, and the boss music starts this many frames later
     MUSIC_FADE_MS = 1200
     BOSS_MUSIC_DELAY = 75
@@ -72,6 +85,7 @@ class Level1:
         # nothing in a round (the Phoenix "Fast" frames only fly at 90 degrees: no rotation needed)
         for name in ["Normal", "Destroy", "Hit", "Attack"]:
             queue_rotations(get_image(f"Enemy/Phoenix/Phoenix{name}.png"), 100)
+            queue_rotations(get_image(f"Enemy/Scout/Scout{name}.png"), 53)
         for name in ["Idle", "Move", "Destroy", "Hit", "Attack"]:
             queue_rotations(get_image(f"Enemy/Interceptor/Interceptor{name}.png"), 30)
 
@@ -119,6 +133,12 @@ class Level1:
             self._count_boss_music = self.BOSS_MUSIC_DELAY
             log.debug('Create Carrier')
 
+    def _choose_wave(self) -> str:
+        progress = min(1.0, self._count_create_carrier / self.SPAWN_SPEED_CARRIER)
+        names = list(self.WAVE_WEIGHTS)
+        weights = [start + (end - start) * progress for start, end in self.WAVE_WEIGHTS.values()]
+        return random.choices(names, weights=weights)[0]
+
     def clear_enemies(self):
         """ Remove every enemy and enemy bullet (test mode), a removed boss does not count as a victory """
         for sprite in G_Enemys.sprites() + G_Enemy_Bullets.sprites():
@@ -147,8 +167,11 @@ class Level1:
 
             if self._count_create_scout > self.spawn_speed_scout:
                 self._count_create_scout = 0
-                if EnemyScout.add_enemy_scout(1):
-                    log.debug('Create Scout')
+                wave = self._choose_wave()
+                count = EnemyScout.spawn_wave(wave)
+                if count > 1:
+                    self._count_create_scout = -self.spawn_speed_scout * (count - 1) * self.FORMATION_PAUSE
+                log.debug('Create Scouts: %s (%d)', wave, count)
             if self._count_create_phoenix > self.spawn_speed_phoenix:
                 self._phoenix_created_times += 1
                 self._count_create_phoenix = 0
