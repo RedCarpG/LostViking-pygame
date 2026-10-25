@@ -199,8 +199,8 @@ class EnemyScout(EnemyI):
 
     def _wanted_angle(self) -> float:
         if self.flight == self.STRAFE:
-            # Faces down, banking into its flight
-            return -self._direction * self.STRAFE_BANK
+            # Faces down, its nose turned a little toward where it flies
+            return self._direction * self.STRAFE_BANK
         if self.flight == self.HOVER and self._stage == "hold":
             player = G_Player1.sprite
             if player is not None:
