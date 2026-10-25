@@ -6,3 +6,4 @@ from .ScreenFX import ScreenFX
 from .Explosion import Explosion, Spark
 from .FloatingText import FloatingText
 from .MuzzleFlash import MuzzleFlash
+from .TransformRing import TransformRing

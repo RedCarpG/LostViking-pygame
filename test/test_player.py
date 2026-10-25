@@ -1,4 +1,5 @@
 import pygame
+from pygame import Vector2
 from pygame.locals import KEYUP
 
 from conftest import run
@@ -126,3 +127,79 @@ def test_scout_ram_hurts_instead_of_destroying(round_game):
     run(round_game, 1)
     assert player.life == lives
     assert player.health == player.MAX_HEALTH - 50
+
+
+def _switch(game):
+    pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=C.SWITCH[0], mod=0, unicode="e", scancode=0))
+    run(game, 1)
+
+
+def test_e_switches_weapons_and_transforming_blocks_shots(round_game, keys):
+    from src.game.player import PlayerTorpedoViking, PlayerWeaponViking
+    player = round_game.player
+    assert isinstance(player.weapon, PlayerWeaponViking)
+    _switch(round_game)
+    assert isinstance(player.weapon, PlayerTorpedoViking) and player.transforming
+    # No shot while transforming, then torpedoes
+    keys.down = {C.SHOOT[0]}
+    run(round_game, player.TRANSFORM_FRAMES - 3)
+    assert len(G_Player_Bullets) == 0
+    run(round_game, 4)
+    assert len(G_Player_Bullets) == 2
+    # Switching again is refused until the transform is over, then goes back
+    keys.down = set()
+    run(round_game, player.TRANSFORM_FRAMES)
+    _switch(round_game)
+    assert isinstance(player.weapon, PlayerWeaponViking)
+
+
+def test_weapons_share_the_level(round_game):
+    player = round_game.player
+    player.level_up()
+    player.level_up()
+    assert [each.level for each in player.weapons] == [3, 3]
+    player.reset_level()
+    assert [each.level for each in player.weapons] == [1, 1]
+
+
+def test_torpedo_salvo_by_level(round_game):
+    from src.game.player import PlayerTorpedoViking
+    player = round_game.player
+    weapon = next(each for each in player.weapons if isinstance(each, PlayerTorpedoViking))
+    counts = []
+    for level in range(1, 6):
+        G_Player_Bullets.empty()
+        weapon.shoot(Pos(player.pos))
+        counts.append(len(G_Player_Bullets))
+        player.level_up()
+    assert counts == [2, 2, 4, 4, 6]
+
+
+def test_torpedoes_home_onto_an_enemy_off_to_the_side(round_game):
+    from src.game.level.level1 import EnemyScout
+    from src.game.player import PlayerTorpedoViking
+    player = round_game.player
+    # Far to the side and above: straight shots would miss it
+    scout = EnemyScout(Pos([player.rect.centerx + 350, 250]))
+    scout._speed.update(0, 0)
+    scout._count_attack_interval = 10 ** 6
+    weapon = next(each for each in player.weapons if isinstance(each, PlayerTorpedoViking))
+    weapon.shoot(Pos(player.pos))
+    for _ in range(120):
+        scout._speed.update(0, 0)
+        run(round_game, 1)
+        if not scout.is_active:
+            break
+    assert not scout.is_active
+    assert player.kills == 1
+
+
+def test_torpedoes_hurt_armored_ships_more(round_game):
+    from src.game.level.level1 import EnemyScout, EnemyInterceptor
+    from src.game.player.LanzerTorpedo import LanzerTorpedo
+    torpedo = LanzerTorpedo(round_game.player.rect.center, Vector2(0, 0), 5, 100, round_game.player)
+    assert EnemyScout.ARMORED and not EnemyInterceptor.ARMORED
+    scout = EnemyScout(Pos([100, 100]))
+    interceptor = EnemyInterceptor(Pos([300, 100]), [[300, 200]])
+    assert torpedo.damage_to(scout) == 100 + LanzerTorpedo.ARMOR_BONUS
+    assert torpedo.damage_to(interceptor) == 100

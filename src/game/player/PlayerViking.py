@@ -1,16 +1,23 @@
 import pygame
+from pygame import Vector2
 
 from src.game.animation import Effect, MuzzleFlash
 from src.util.type import Pos, Size
 from src.helper.image import get_image, get_rotated_image
 from .PlayerPlane import PlayerPlane
 from .PlayerWeapon import PlayerWeapon, PlayerBullet
+from .LanzerTorpedo import LanzerTorpedo
 
 
 class PlayerViking(PlayerPlane):
+    """ The Viking switches between its two weapons, as it transforms in StarCraft II:
+    twin gatling cannons (many fast shots, best against swarms and shields) and
+    Lanzer Torpedoes (homing, best against armored ships)
+    """
+
     def __init__(self, pos):
         super().__init__(
-            weapon=PlayerWeaponViking(self),
+            weapons=[PlayerWeaponViking(self), PlayerTorpedoViking(self)],
             pos=pos,
             frames={
                 "BASE": get_image("PlayerPlane/VikingBase.png"),
@@ -27,9 +34,12 @@ class PlayerViking(PlayerPlane):
 
 
 class PlayerWeaponViking(PlayerWeapon):
-    """ Level 1: two guns. 2: two angled shots. 3: two wider shots.
+    """ Twin gatling cannons. Level 1: two guns. 2: two angled shots. 3: two wider shots.
     4: shoots faster. 5: two more guns on the wings
     """
+
+    NAME = "TWIN GATLING"
+    SWITCH_SOUND = "TRANSFORM_ASSAULT"
 
     BASIC_DMG = 80
     INC_DMG = 5
@@ -68,6 +78,36 @@ class PlayerWeaponViking(PlayerWeapon):
             self._fire(pos.move([22, 8]), 0)
             for gun in self.WING_GUNS:
                 MuzzleFlash(self.player, gun)
+
+
+class PlayerTorpedoViking(PlayerWeapon):
+    """ Lanzer Torpedoes, fired in salvos of pairs. Level 1: one pair. 2: faster.
+    3: two pairs. 4: faster. 5: three pairs. Armored ships take extra damage (see LanzerTorpedo).
+    Against light ships and shields the twin gatling does more damage
+    """
+
+    NAME = "LANZER TORPEDOES"
+    SHOOT_SOUND = "TORPEDO_LAUNCH"
+    SWITCH_SOUND = "TRANSFORM_FIGHTER"
+
+    BASIC_DMG = 110
+    INC_DMG = 20
+    FIRE_INTERVALS = (40, 34, 40, 34, 30)
+    # Torpedoes per salvo, by level
+    SALVOS = (2, 2, 4, 4, 6)
+    # Wing pods, from the plane center (x) and top (y)
+    POD_X = 12
+    POD_Y = 16
+
+    def shoot(self, pos: Pos):
+        plane = self.player.rect
+        for i in range(self.SALVOS[self._level - 1]):
+            side = -1 if i % 2 == 0 else 1
+            pair = i // 2
+            # Each pair drops a little further out and ignites a little later: a ripple
+            LanzerTorpedo((plane.centerx + side * self.POD_X, plane.top + self.POD_Y),
+                          eject=Vector2(side * (1.6 + pair * 1.4), 1.0 + pair * 0.5),
+                          ignite=5 + pair * 5, damage=self._damage, player=self.player, rank=pair)
 
 
 class PlayerBulletViking(PlayerBullet):

@@ -13,6 +13,12 @@ from src.game.player import PlayerPlane
 class PlayerWeapon(ABC):
     LEVEL_MAX = 5
 
+    # Shown when the player switches to it
+    NAME = ""
+    # Sound of a shot, and of the plane switching to this weapon
+    SHOOT_SOUND = "PLAYER_SHOOT"
+    SWITCH_SOUND = None
+
     BASIC_DMG = 80
     INC_DMG = 10
     # Frames between two shots, by level (the last value for the higher levels)
@@ -91,18 +97,25 @@ class PlayerBullet(pygame.sprite.Sprite, ABC):
         # General get hit method for bullets
         self.kill()
 
+    def hit_shield(self):
+        """ Absorbed by a shield (the shield shows its own impact effect) """
+        self.kill()
+
+    def damage_to(self, enemy) -> int:
+        """ Damage dealt to `enemy` (some weapons hurt some ships more) """
+        return self.damage
+
     def _move(self):
         self.rect.move_ip(self.speed.x, self.speed.y)
 
     def collide_enemy(self, enemy_group):
         enemy = spritecollideany(self, enemy_group, collide_detect(0.8))
         if enemy and enemy.is_active:
-            # A shield absorbs the bullet and shows its own impact effect
             shielded = getattr(enemy, "shield", 0) > 0
-            enemy.hit(self.damage, hit_pos=self.rect.center)
+            enemy.hit(self.damage_to(enemy), hit_pos=self.rect.center)
             if not enemy.is_active:
                 self.player.credit_kill(enemy)
             if shielded:
-                self.kill()
+                self.hit_shield()
             else:
                 self.hit()

@@ -71,6 +71,7 @@ IMAGES = [
     "UI/Equip/Left_LightYellow.png",
     "UI/Equip/Left_LightGreen.png",
     "UI/Equip/Weapon0.png",
+    "UI/Equip/Torpedo0.png",
     "UI/Equip/Bomb0.png",
 
     "UI/Boss/MidTop.png",

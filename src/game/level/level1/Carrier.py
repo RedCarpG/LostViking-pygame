@@ -24,6 +24,8 @@ class EnemyCarrier(EnemyBoss):
     # The top half of the ship stays above the screen
     STOP_TOP = -150
 
+    ARMORED = True
+
     MAX_INTERCEPTOR_NUMBER = 9
 
     # Frames between two attacks, faster below half health

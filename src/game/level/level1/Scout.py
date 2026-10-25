@@ -17,6 +17,7 @@ class EnemyScout(EnemyI):
 
     # Ramming a Scout hurts (half the health) instead of destroying the plane at once
     COLLIDE_DAMAGE = 50
+    ARMORED = True
 
     # At most this many Scouts at a time
     MAX_NUMBER = 25

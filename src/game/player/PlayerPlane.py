@@ -17,7 +17,8 @@ from src.util.inertial import accelerate, decelerate
 from src.helper.sound import play_sound
 
 from src.game.groups import G_Enemys, G_Enemy_Bullets, G_Players
-from src.game.animation import AnimeSprite, ScreenShake, HitStop, ScreenFX, Explosion, FloatingText
+from src.game.animation import AnimeSprite, ScreenShake, HitStop, ScreenFX, Explosion, FloatingText, TransformRing
+from src.game.animation.TransformRing import SWITCH_COLORS
 from src.game.animation.Effect import AttachEffect
 from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB
 from .player_control import PLAYER1_CONTROL, PLAYER2_CONTROL
@@ -61,8 +62,11 @@ class PlayerPlane(AnimeSprite):
     LOW_HEALTH = 30
     # Frames the world freezes when the plane is destroyed (see HitStop)
     HITSTOP_DESTROY = 6
+    # Frames to switch weapons (the Viking transforms), no shot meanwhile
+    TRANSFORM_FRAMES = 24
 
-    def __init__(self, weapon: PlayerWeapon, pos, frames, frame_size, id=1):
+    def __init__(self, weapons: list, pos, frames, frame_size, id=1):
+        """ :param weapons: the weapons the plane switches between (they share the level) """
         # Init
         super().__init__(frames=frames, frame_size=frame_size)
 
@@ -78,9 +82,9 @@ class PlayerPlane(AnimeSprite):
             self.start_position = (int(pygame.display.get_surface().get_width() // 2),
                                    int(pygame.display.get_surface().get_height() - self.rect.height - self.LIMIT_BOTTOM))
 
-        # Set bullet type
-        ''' Init Weapon '''
-        self._weapon = weapon
+        self._weapons = weapons
+        self._weapon_index = 0
+        self._count_transform = 0
 
         self._score = 0
         # Enemies destroyed by this player
@@ -166,6 +170,8 @@ class PlayerPlane(AnimeSprite):
     def _reload(self):
         if self._count_attack_interval > 0:
             self._count_attack_interval -= 1
+        if self._count_transform > 0:
+            self._count_transform -= 1
 
     def destroy(self) -> None:
         self._health = 0
@@ -252,11 +258,12 @@ class PlayerPlane(AnimeSprite):
         """
         This method is called from a user attack event
         """
-        if self.is_active:
+        if self.is_active and self._count_transform == 0:
             if self._count_attack_interval == 0:
-                play_sound("PLAYER_SHOOT")
-                self._weapon.shoot(pos=Pos(self.rect.center))
-                self._count_attack_interval = self._weapon.fire_interval
+                weapon = self.weapon
+                play_sound(weapon.SHOOT_SOUND)
+                weapon.shoot(pos=Pos(self.rect.center))
+                self._count_attack_interval = weapon.fire_interval
 
     def collide_enemy(self, enemy_group):
         enemy = spritecollideany(self, enemy_group, collide_detect(0.5))
@@ -396,25 +403,53 @@ class PlayerPlane(AnimeSprite):
 
     @property
     def weapon(self) -> PlayerWeapon:
-        return self._weapon
+        """ The weapon in use """
+        return self._weapons[self._weapon_index]
 
-    @weapon.setter
-    def weapon(self, weapon_type) -> None:
-        self._weapon = weapon_type
+    @property
+    def weapons(self) -> list:
+        return self._weapons
+
+    @property
+    def weapon_index(self) -> int:
+        return self._weapon_index
+
+    @property
+    def transforming(self) -> bool:
+        return self._count_transform > 0
+
+    def switch_weapon(self) -> bool:
+        """ Change to the next weapon (the plane can not shoot while it transforms)
+        :return: False if it can not switch now
+        """
+        if not self.is_active or self._count_transform > 0 or len(self._weapons) < 2:
+            return False
+        self._weapon_index = (self._weapon_index + 1) % len(self._weapons)
+        self._count_transform = self.TRANSFORM_FRAMES
+        weapon = self.weapon
+        if weapon.SWITCH_SOUND:
+            play_sound(weapon.SWITCH_SOUND)
+        TransformRing(self, self._weapon_index)
+        FloatingText((self.rect.centerx, self.rect.top - 8), weapon.NAME, SWITCH_COLORS[self._weapon_index])
+        return True
 
     @property
     def level(self) -> int:
         return self.weapon.level
 
     def level_up(self) -> bool:
-        """ :return: False if the weapon was already at its highest level """
-        return self.weapon.level_up()
+        """ Every weapon goes up a level
+        :return: False if the weapons were already at their highest level
+        """
+        return all([each.level_up() for each in self._weapons])
 
     def level_down(self) -> None:
-        self.weapon.level_down()
+        for each in self._weapons:
+            each.level_down()
 
     def reset_level(self) -> None:
-        self.weapon.reset_level()
+        for each in self._weapons:
+            each.reset_level()
 
     # ----- Score
     @property
@@ -495,8 +530,8 @@ class PlayerPlane(AnimeSprite):
             break_cb_func=break_cb_func,
             loop=True
         )
-        # self.is_invincible = True
-        self._weapon.reset_level()
+        self.reset_level()
+        self._count_transform = 0
         self._health = self.MAX_HEALTH
 
     # ----------------- Event -----------------
@@ -527,6 +562,9 @@ class PlayerPlane(AnimeSprite):
     def handle_event(self, e):
         control = self.controller
         if e.type == KEYDOWN:
+            if e.key in control.SWITCH:
+                self.switch_weapon()
+                return True
             # Shooting is handled in detect_key_pressed()
             return e.key in control.SHOOT
         # --------------- Key Up Events ---------------
@@ -543,7 +581,7 @@ class PlayerPlane(AnimeSprite):
             elif e.key in control.BOMB:
                 pygame.event.post(pygame.event.Event(
                     EVENT_PLAYER_BOMB, {"player": self, "id": self.id}))
-            elif e.key in control.SHOOT:
+            elif e.key in control.SHOOT or e.key in control.SWITCH:
                 pass
             else:
                 return False

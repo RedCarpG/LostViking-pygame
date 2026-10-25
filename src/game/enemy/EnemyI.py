@@ -28,6 +28,9 @@ class EnemyI(AnimeSprite, BasicEnemy):
     # Damage dealt to the player when they collide, None destroys the player
     COLLIDE_DAMAGE = None
 
+    # Armored ships take extra damage from the Lanzer Torpedoes (as in StarCraft II)
+    ARMORED = False
+
     # Fixed (width, height) collision box, for sprites that rotate: the rect of a
     # rotated image grows with the angle. None uses the rect (see collide_detect)
     HITBOX = None

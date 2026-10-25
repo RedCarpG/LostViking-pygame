@@ -45,12 +45,12 @@ class UIIntro:
             items.append(("EXIT", post_event(pygame.QUIT)))
         self.menu = Menu(self.surface, items, SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.48)
 
-        self.hint_text = render_text(
-            get_font("IntroHint"),
-            "WASD / ARROWS  MOVE     SPACE  SHOOT     Q  BOMB     P  PAUSE",
-            self.HINT_COLOR, spacing=0)
-        self.hint_rect = self.hint_text.get_rect(
-            center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.76))
+        # Controls, two lines
+        self.hints = []
+        for i, line in enumerate(("WASD / ARROWS  MOVE     SPACE  SHOOT     E  SWITCH WEAPON",
+                                  "Q  BOMB     P  PAUSE")):
+            text = render_text(get_font("IntroHint"), line, self.HINT_COLOR, spacing=0)
+            self.hints.append((text, text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.76 + i * 30))))
 
         self.best_text = None
         self._render_best()
@@ -68,7 +68,8 @@ class UIIntro:
             self.surface.blit(self.best_text, self.best_text.get_rect(
                 center=(SCREEN_WIDTH / 2, self.line_rect.bottom + 30)))
         self.menu.blit()
-        self.surface.blit(self.hint_text, self.hint_rect)
+        for text, rect in self.hints:
+            self.surface.blit(text, rect)
 
     def handle_event(self, event):
         if event.type == pygame.KEYUP and event.key == K_ESCAPE and not IS_WEB:
