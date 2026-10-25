@@ -2,7 +2,8 @@
 
 A StarCraft II themed vertical shooter: fly a Terran Viking from a Terran Starport, through an
 asteroid field and the Protoss outposts, to the Protoss Stargate and its Carrier. See the
-[game intro](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/README.md) for more screenshots.
+[game intro](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/README.md)
+([中文介绍](https://github.com/RedCarpG/DOCS/blob/main/lost_viking/README_zh.md)) for more screenshots.
 
 <p>
 <img src="https://github.com/RedCarpG/DOCS/blob/main/lost_viking/route_2_asteroids.png?raw=true" width="49%" alt="Asteroid field">
