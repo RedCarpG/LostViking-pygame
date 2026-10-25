@@ -203,3 +203,61 @@ def test_torpedoes_hurt_armored_ships_more(round_game):
     interceptor = EnemyInterceptor(Pos([300, 100]), [[300, 200]])
     assert torpedo.damage_to(scout) == 100 + LanzerTorpedo.ARMOR_BONUS
     assert torpedo.damage_to(interceptor) == 100
+
+
+def _gatling_shot(player, x, y, level):
+    from src.game.player import PlayerBulletViking, PlayerWeaponViking
+    weapon = next(each for each in player.weapons if isinstance(each, PlayerWeaponViking))
+    return PlayerBulletViking(Pos([x, y]), Vector2(0, -17), 100, player=player,
+                              pierce=weapon.PIERCE[level - 1])
+
+
+def _sitting_scouts(xs_ys):
+    from src.game.level.level1 import EnemyScout
+    scouts = []
+    for x, y in xs_ys:
+        scout = EnemyScout(Pos([x, y]))
+        scout._speed.update(0, 0)
+        scout._count_attack_interval = 10 ** 6
+        scouts.append(scout)
+    return scouts
+
+
+def test_gatling_pierces_from_level_4(round_game):
+    from src.game.player import PlayerWeaponViking
+    assert PlayerWeaponViking.PIERCE == (0, 0, 0, 1, 2)
+    player = round_game.player
+    scouts = _sitting_scouts([(300, 500), (300, 380), (300, 260), (300, 140)])
+    bullet = _gatling_shot(player, 300, 640, level=5)
+    for _ in range(40):
+        for each in scouts:
+            each._speed.update(0, 0)
+        run(round_game, 1)
+    damaged = [each.MAX_HEALTH - each.health for each in scouts]
+    # Through two Scouts, stopped by the third, each hit 30% weaker; the fourth untouched
+    assert damaged == [100, 70, 49, 0]
+    assert not bullet.alive()
+
+
+def test_level_1_shots_stop_at_the_first_enemy(round_game):
+    player = round_game.player
+    scouts = _sitting_scouts([(600, 500), (600, 380)])
+    _gatling_shot(player, 600, 640, level=1)
+    run(round_game, 20)
+    assert [each.MAX_HEALTH - each.health for each in scouts] == [100, 0]
+
+
+def test_a_shield_stops_a_piercing_shot(round_game):
+    from src.game.level.level1 import EnemyPhoenix
+    player = round_game.player
+    phoenix = EnemyPhoenix(Pos([450, 300]), is_left=True)
+    phoenix.enter_action_stay_phase()
+    phoenix.set_pos(Pos([450, 300]))
+    phoenix._count_attack_interval = 10 ** 6
+    phoenix._count_graviton = 10 ** 6
+    behind = _sitting_scouts([(450, 120)])[0]
+    bullet = _gatling_shot(player, 450, 600, level=5)
+    run(round_game, 30)
+    assert phoenix.shield == phoenix.MAX_SHIELD - 100
+    assert behind.health == behind.MAX_HEALTH
+    assert not bullet.alive()

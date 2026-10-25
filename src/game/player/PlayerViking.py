@@ -35,7 +35,8 @@ class PlayerViking(PlayerPlane):
 
 class PlayerWeaponViking(PlayerWeapon):
     """ Twin gatling cannons. Level 1: two guns. 2: two angled shots. 3: two wider shots.
-    4: shoots faster. 5: two more guns on the wings
+    4: shoots faster, the shots go through an enemy. 5: two more guns on the wings, the shots
+    go through two enemies (they lose 30% of their damage each time, a shield stops them)
     """
 
     NAME = "TWIN GATLING"
@@ -44,6 +45,8 @@ class PlayerWeaponViking(PlayerWeapon):
     BASIC_DMG = 80
     INC_DMG = 5
     FIRE_INTERVALS = (20, 20, 20, 16)
+    # Enemies a shot goes through, by level
+    PIERCE = (0, 0, 0, 1, 2)
 
     SPEED = 17
     # Guns, from the plane center (x) and top (y): the wing pods, and the wing tips (level 5)
@@ -55,7 +58,8 @@ class PlayerWeaponViking(PlayerWeapon):
         self._bullet_type = PlayerBulletViking
 
     def _fire(self, pos: Pos, dx, angle=None):
-        self._bullet_type(pos, pygame.Vector2(dx, -self.SPEED), self._damage, angle=angle, player=self.player)
+        self._bullet_type(pos, pygame.Vector2(dx, -self.SPEED), self._damage, angle=angle, player=self.player,
+                          pierce=self.PIERCE[self._level - 1])
 
     def shoot(self, pos: Pos):
         left = pos.move_x(-10)
@@ -112,23 +116,40 @@ class PlayerTorpedoViking(PlayerWeapon):
 
 class PlayerBulletViking(PlayerBullet):
 
+    # Piercing shots glow green, the color of the gatling: (multiply, then add)
+    PIERCE_TINT = ((150, 255, 170), (40, 90, 40))
+    _pierce_image = None
+
     def __init__(self, pos: Pos,
                  speed: pygame.Vector2,
                  damage,
                  player: PlayerPlane,
-                 angle=None):
-        super().__init__(pos=pos, speed=speed,
-                         image=get_image("PlayerPlane/bullet.png"), player=player)
+                 angle=None,
+                 pierce=0):
+        image = get_image("PlayerPlane/bullet.png")
+        if pierce:
+            image = self._piercing_image(image)
+        super().__init__(pos=pos, speed=speed, image=image, player=player)
         self.damage = damage
+        self.pierce = pierce
         if angle:
             self._rotate(angle)
+
+    @classmethod
+    def _piercing_image(cls, image):
+        if cls._pierce_image is None:
+            multiply, add = cls.PIERCE_TINT
+            cls._pierce_image = image.copy()
+            cls._pierce_image.fill(multiply, special_flags=pygame.BLEND_RGB_MULT)
+            cls._pierce_image.fill(add, special_flags=pygame.BLEND_RGB_ADD)
+        return cls._pierce_image
 
     def _rotate(self, angle: int) -> None:
         temp = self.rect.center
         self.image = get_rotated_image(self.image, angle)
         self.rect = self.image.get_rect(center=temp)
 
-    def hit(self):
+    def _spark(self):
         Effect(
             Pos(self.rect.center).random_offset(5),
             frames={
@@ -136,4 +157,10 @@ class PlayerBulletViking(PlayerBullet):
             },
             frame_size=Size([35, 19])
         )
+
+    def hit(self):
+        self._spark()
         return super().hit()
+
+    def pass_through(self):
+        self._spark()
