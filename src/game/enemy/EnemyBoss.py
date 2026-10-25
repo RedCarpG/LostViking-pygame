@@ -17,6 +17,8 @@ class BossActionPhase(Enum):
 
 
 class EnemyBoss(EnemyI):
+    # Shown under its health bar, None: no name
+    NAME = None
     MAX_HEALTH = 30000
     SCORE = 15000
 

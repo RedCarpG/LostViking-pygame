@@ -21,15 +21,20 @@ def _play(game, keys, frames, rng):
 
 
 def test_normal_round_runs(game, keys):
-    """ A normal round (enemies spawn, the player can be destroyed) for a while, drawing too """
+    """ A normal round (enemies spawn, the player can be destroyed) for a while, drawing too:
+    a part of every stage of the route
+    """
     if game.state != GameState.INTRO:
         game.to_main_menu()
     game.start_round(test_mode=False)
-    game.level.SPAWN_SPEED_CARRIER = 1500
-    try:
-        _play(game, keys, 2400, random.Random(3))
-    finally:
-        del game.level.SPAWN_SPEED_CARRIER
+    rng = random.Random(3)
+    for name in game.level.STAGE_NAMES[:-1]:
+        assert game.level.stage == name
+        _play(game, keys, 250, rng)
+        if game.state != GameState.PLAYING:
+            break
+        if name != "stargate":
+            game.level.next_stage()
     assert game.state in (GameState.PLAYING, GameState.GAME_OVER)
 
 

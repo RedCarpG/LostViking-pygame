@@ -2,8 +2,9 @@
 
 - flash: the screen lights up (the nuke, the boss blast, the boss getting angry)
 - vignette: red edges when the plane is hit, pulsing while its health is low
-- rings: shockwaves growing from a point (the nuke)
-- banner: the WARNING shown when the boss comes
+- rings: shockwaves growing from a point (the nuke, a warp)
+- banner: the WARNING shown when a boss comes
+- stage title: the name of the part of the route the plane enters
 
 Pixel style like the other generated effects: hard dithered steps on the 2x2 grid.
 The images are made ahead of time (see `prepare` and warmup).
@@ -23,8 +24,9 @@ VIGNETTE_ALPHA = 190
 VIGNETTE_WIDTH = 56
 VIGNETTE_STEPS = 5
 
-# Shockwave colors, from the start to the end of a ring
+# Shockwave colors, from the start to the end of a ring: fire, and the light of a warp
 RING_COLORS = [(255, 255, 232), (255, 238, 140), (255, 200, 64), (248, 136, 36), (220, 74, 30)]
+WARP_RING_COLORS = [(235, 254, 255), (146, 250, 255), (4, 244, 255), (91, 138, 200), (75, 44, 155)]
 
 # Warning banner
 BANNER_RED = (220, 40, 48)
@@ -34,6 +36,15 @@ BANNER_Y = int(SCREEN_HEIGHT * 0.42)
 BANNER_HEIGHT = 120
 STRIPE_HEIGHT = 10      # art pixels
 STRIPE_PERIOD = 16      # art pixels
+# Texts under the WARNING, drawn ahead of time
+BANNER_SUBTITLES = ("CARRIER APPROACHING", "PROTOSS STARGATE AHEAD", "CARRIER WARPED IN")
+
+# Stage title
+TITLE_COLOR = (214, 236, 255)
+TITLE_GLOW = (30, 70, 150)
+SUBTITLE_COLOR = (140, 170, 220)
+LINE_COLOR = (90, 140, 220)
+TITLE_Y = int(SCREEN_HEIGHT * 0.3)
 
 _images = None
 
@@ -70,13 +81,37 @@ def _build():
     title = render_text(get_font("MenuTitle"), "WARNING", (255, 236, 236), spacing=1, glow_color=BANNER_RED)
     result["title"] = upscale(title, 2)
     yield
-    result["subtitle"] = render_text(get_font("MenuText"), "CARRIER APPROACHING", (255, 170, 170),
-                                     spacing=1, shadow=True)
+    result["subtitles"] = {text: _render_subtitle(text) for text in BANNER_SUBTITLES}
     back = pygame.Surface((SCREEN_WIDTH, BANNER_HEIGHT), pygame.SRCALPHA)
     back.fill(BANNER_BACK)
     result["back"] = back
     if _images is None:
         _images = result
+
+
+def _render_subtitle(text):
+    return render_text(get_font("MenuText"), text, (255, 170, 170), spacing=1, shadow=True)
+
+
+# Stage titles, by (title, subtitle)
+_titles = {}
+
+
+def prepare_titles(titles) -> None:
+    """ Draw the (title, subtitle) texts of stage titles ahead of time (see warmup) """
+    for title in titles:
+        if title not in _titles:
+            warmup.add(lambda title=title: _title_images(title))
+
+
+def _title_images(title):
+    images = _titles.get(title)
+    if images is None:
+        text, subtitle = title
+        images = (render_text(get_font("MenuTitle"), text, TITLE_COLOR, spacing=1, glow_color=TITLE_GLOW),
+                  render_text(get_font("MenuText"), subtitle, SUBTITLE_COLOR, spacing=1, shadow=True))
+        _titles[title] = images
+    return images
 
 
 def _make_vignette():
@@ -140,8 +175,9 @@ class Banner:
     BLINK_OFF = 8
     SCROLL = 2
 
-    def __init__(self) -> None:
+    def __init__(self, subtitle) -> None:
         self.age = 0
+        self.subtitle = subtitle
 
     @property
     def done(self) -> bool:
@@ -174,10 +210,52 @@ class Banner:
         surface.blit(stripes, (x, top + BANNER_HEIGHT), (period - scroll + x, 0, width, height))
 
         if age >= self.SLIDE and (age - self.SLIDE) % (self.BLINK_ON + self.BLINK_OFF) < self.BLINK_ON:
-            for name, y in (("title", BANNER_Y - 18), ("subtitle", BANNER_Y + 38)):
-                image = images[name]
+            subtitles = images["subtitles"]
+            if self.subtitle not in subtitles:
+                subtitles[self.subtitle] = _render_subtitle(self.subtitle)
+            for image, y in ((images["title"], BANNER_Y - 18), (subtitles[self.subtitle], BANNER_Y + 38)):
                 image.set_alpha(alpha)
                 surface.blit(image, image.get_rect(center=(SCREEN_WIDTH // 2, y)))
+
+
+class StageTitle:
+    """ The name of a part of the route: fades in, a line grows under it, then it fades out """
+
+    DURATION = 210
+    FADE_IN = 16
+    FADE_OUT = 40
+    LINE_FRAMES = 28
+    LINE_WIDTH = 380
+
+    def __init__(self, title) -> None:
+        self.age = 0
+        self.images = _title_images(title)
+
+    @property
+    def done(self) -> bool:
+        return self.age >= self.DURATION
+
+    def update(self) -> None:
+        self.age += 1
+
+    def draw(self, surface) -> None:
+        left = self.DURATION - self.age
+        alpha = 255 * min(self.age, self.FADE_IN) // self.FADE_IN
+        if left < self.FADE_OUT:
+            alpha = 255 * left // self.FADE_OUT
+        title, subtitle = self.images
+        title.set_alpha(alpha)
+        surface.blit(title, title.get_rect(midbottom=(SCREEN_WIDTH // 2, TITLE_Y)))
+        # The line grows from the middle, on the pixel grid
+        width = int(self.LINE_WIDTH * min(1.0, self.age / self.LINE_FRAMES)) // (PIXEL * 2) * PIXEL * 2
+        if width > 0 and alpha > 0:
+            r, g, b = LINE_COLOR
+            k = alpha / 255
+            surface.fill((int(r * k), int(g * k), int(b * k)),
+                         ((SCREEN_WIDTH - width) // 2, TITLE_Y + PIXEL * 3, width, PIXEL),
+                         special_flags=pygame.BLEND_RGB_ADD)
+        subtitle.set_alpha(alpha)
+        surface.blit(subtitle, subtitle.get_rect(midtop=(SCREEN_WIDTH // 2, TITLE_Y + PIXEL * 7)))
 
 
 class ScreenFX:
@@ -200,6 +278,7 @@ class ScreenFX:
     # [center, max radius, age, duration]
     _rings = []
     _banner = None
+    _title = None
 
     # ------------------ Triggers ------------------
 
@@ -229,12 +308,17 @@ class ScreenFX:
         cls._low_health = low
 
     @classmethod
-    def ring(cls, center, radius, duration=30) -> None:
-        cls._rings.append([center, radius, 0, duration])
+    def ring(cls, center, radius, duration=30, colors=RING_COLORS) -> None:
+        cls._rings.append([center, radius, 0, duration, colors])
 
     @classmethod
-    def boss_warning(cls) -> None:
-        cls._banner = Banner()
+    def boss_warning(cls, subtitle=BANNER_SUBTITLES[0]) -> None:
+        cls._banner = Banner(subtitle)
+
+    @classmethod
+    def stage_title(cls, title, subtitle) -> None:
+        """ Show the name of the part of the route the plane enters (see prepare_titles) """
+        cls._title = StageTitle((title, subtitle))
 
     # ------------------ Frame ------------------
 
@@ -253,16 +337,20 @@ class ScreenFX:
             cls._banner.update()
             if cls._banner.done:
                 cls._banner = None
+        if cls._title is not None:
+            cls._title.update()
+            if cls._title.done:
+                cls._title = None
 
     @classmethod
     def draw(cls, surface) -> None:
         """ Rings, vignette and flash: over the world, under the HUD """
-        for center, radius, age, duration in cls._rings:
+        for center, radius, age, duration, colors in cls._rings:
             t = age / duration
             r = int(radius * (1 - (1 - t) ** 2)) // PIXEL * PIXEL
             width = max(PIXEL, int(12 * (1 - t)) // PIXEL * PIXEL)
             if r > width:
-                color = RING_COLORS[min(len(RING_COLORS) - 1, int(t * len(RING_COLORS)))]
+                color = colors[min(len(colors) - 1, int(t * len(colors)))]
                 pygame.draw.circle(surface, color, center, r, width)
 
         strength = cls._hurt
@@ -283,7 +371,9 @@ class ScreenFX:
 
     @classmethod
     def draw_overlay(cls, surface) -> None:
-        """ The banner: over the HUD """
+        """ The stage title and the banner: over the HUD """
+        if cls._title is not None:
+            cls._title.draw(surface)
         if cls._banner is not None:
             cls._banner.draw(surface, _get_images())
 
@@ -296,3 +386,4 @@ class ScreenFX:
         cls._low_health = False
         cls._rings = []
         cls._banner = None
+        cls._title = None

@@ -130,10 +130,11 @@ def test_the_oracle_drops_wards_in_front_of_the_plane(round_game):
     assert wards[0].rect.centery < player.rect.centery
 
 
-def test_the_level_brings_oracles(round_game):
+def test_the_patrol_brings_an_oracle(round_game):
     level = round_game.level
     level.auto_spawn = True
-    level._count_create_oracle = level.SPAWN_SPEED_ORACLE
+    level._enter_stage(level.STAGE_NAMES.index("patrol"))
+    level._stage_time = level.PATROL_ORACLE - 1
     run(round_game, 2)
     assert len(WarpIn.GROUP) == 1
     run(round_game, WarpIn.DURATION + 2)

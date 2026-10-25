@@ -26,3 +26,7 @@ G_Texts = Group()
 
 # Beams drawn straight onto the screen by their draw() method (see GravitonBeam)
 G_Beams = Group()
+
+# Scenery the structures stand on (outpost platforms, the Terran Starport), drawn over the
+# background and under everything else
+G_Scenery = Group()

@@ -76,9 +76,6 @@ def test_waves_respect_the_scout_limit(round_game):
 def test_formations_get_more_common(round_game):
     level = round_game.level
     random.seed(4)
-    level._count_create_carrier = 0
-    early = sum(level._choose_wave() == "single" for _ in range(400))
-    level._count_create_carrier = level.SPAWN_SPEED_CARRIER
-    late = sum(level._choose_wave() == "single" for _ in range(400))
-    level._count_create_carrier = 0
+    early = sum(level._choose_wave(0.0) == "single" for _ in range(400))
+    late = sum(level._choose_wave(1.0) == "single" for _ in range(400))
     assert early > late + 60

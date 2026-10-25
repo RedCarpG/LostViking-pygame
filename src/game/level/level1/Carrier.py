@@ -6,10 +6,12 @@ from src.game.animation.FloatingText import WARNING_COLOR
 from src.helper.image import get_image, get_scaled_image
 from src.helper.sound import play_sound
 from src.util.type import Pos
+from src.setting import SCREEN_WIDTH
 from src.util.inertial import accelerate, decelerate
 from .Interceptor import EnemyInterceptor
 from . import CarrierLaser
 from .CarrierLaser import LaserCarrier
+from .WarpIn import WarpIn
 from src.game.groups import G_Player1
 
 
@@ -18,6 +20,7 @@ def _sheet(name):
 
 
 class EnemyCarrier(EnemyBoss):
+    NAME = "CARRIER"
     # Drawn at 2x (an integer scale keeps the pixel art sharp)
     SCALE = 2
 
@@ -80,6 +83,22 @@ class EnemyCarrier(EnemyBoss):
         for name in ("CarrierBase", "CarrierNormal", "CarrierDestroy", "CarrierHit", "CarrierAttack"):
             _sheet(name)
         CarrierLaser.prepare()
+
+    @classmethod
+    def warp_frame(cls):
+        """ The frame whose shape shows while it warps in (see WarpIn) """
+        return WarpIn.first_frame(_sheet("CarrierNormal"))
+
+    @classmethod
+    def warp_center(cls):
+        """ Where it stands once in place """
+        return SCREEN_WIDTH // 2, cls.STOP_TOP + _sheet("CarrierNormal").get_height() // 2
+
+    def warp_to(self, pos) -> None:
+        """ Be at `pos` at once, already in place (warped in by the Stargate) """
+        self.set_pos(Pos(list(pos)))
+        self._speed.update(0, 0)
+        self.enter_action_stay_phase()
 
     @property
     def enraged(self) -> bool:

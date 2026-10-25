@@ -31,6 +31,9 @@ class EnemyI(AnimeSprite, BasicEnemy):
     # Armored ships take extra damage from the Lanzer Torpedoes (as in StarCraft II)
     ARMORED = False
 
+    # Ground structures (cannons, pylons, the Stargate): the plane flies over them
+    GROUND = False
+
     # Fixed (width, height) collision box, for sprites that rotate: the rect of a
     # rotated image grows with the angle. None uses the rect (see collide_detect)
     HITBOX = None

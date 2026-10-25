@@ -5,7 +5,7 @@ Includes:
 import random
 import pygame
 from pygame import Vector2
-from pygame.sprite import spritecollideany
+from pygame.sprite import spritecollide, spritecollideany
 from pygame.locals import KEYDOWN, KEYUP
 
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
@@ -320,8 +320,10 @@ class PlayerPlane(AnimeSprite):
                 self._count_attack_interval = weapon.fire_interval
 
     def collide_enemy(self, enemy_group):
-        enemy = spritecollideany(self, enemy_group, collide_detect(0.5))
-        if enemy and enemy.is_active and not self.is_invincible:
+        # The plane flies over ground structures: only ships (and wards, rocks) are in its way
+        enemy = next((each for each in spritecollide(self, enemy_group, False, collide_detect(0.5))
+                      if each.is_active and not each.GROUND), None)
+        if enemy and not self.is_invincible:
             # Each enemy decides how much a collision hurts (see EnemyI.COLLIDE_DAMAGE)
             if enemy.COLLIDE_DAMAGE is None:
                 self.destroy()

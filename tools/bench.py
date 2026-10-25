@@ -3,7 +3,7 @@
 Development tool, run from the project root:
     python tools/bench.py [frames] [--boss-at FRAME] [--god] [--seed N]
 
---boss-at brings the Carrier in at that frame, --god makes the player invincible.
+--boss-at jumps to the Stargate at that frame, --god makes the player invincible.
 Prints the mean, 95th percentile and worst update / draw times, and the frames above 6 ms.
 """
 import os
@@ -83,7 +83,7 @@ def main():
     updates, draws, slow, rounds = [], [], [], []
     for frame in range(args.frames):
         if frame == args.boss_at:
-            game.level.spawn_carrier()
+            game.level.go_to("stargate")
         if game.state == GameState.PLAYING:
             bot()
         else:

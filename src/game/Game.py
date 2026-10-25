@@ -11,10 +11,10 @@ from src.helper.sound import load_music, play_music
 from src.setting import MAIN_VOLUME, SCREEN_SIZE, SCREEN_WIDTH, SCREEN_HEIGHT
 
 from src.game.groups import G_Player1, G_Players, G_BOSS, G_Bomb, G_Enemys, G_Enemy_Bullets, \
-    G_Player_Bullets, G_Supplies, G_Effects, G_Texts, G_Beams
+    G_Player_Bullets, G_Supplies, G_Effects, G_Texts, G_Beams, G_Scenery
 from src.game.player import PlayerViking, load_asset_player, detect_custom_event, reset_player_events
 from src.game.ui import UI, load_asset_ui, UIIntro, UIPause, UIResult, UISettings, Scoreboard, \
-    FPSCounter, Background, TestPanel
+    FPSCounter, Background, TestPanel, UIRoute
 from src.game.supply import load_asset_supply, supply_event_config, update_supply_timer, supply_events_handler
 from src.game.level import Level1
 from src.game.animation import ScreenShake, HitStop, ScreenFX, warmup
@@ -103,8 +103,9 @@ class Game:
         self._frozen_frame = pygame.Surface(SCREEN_SIZE).convert()
         self._frozen_valid = False
 
-        # Level
+        # Level, and its route on the left edge
         self.level = Level1()
+        self.route = UIRoute(self.screen, self.level)
         self.test_panel = TestPanel(self.screen, self)
 
         self.state = GameState.INTRO
@@ -253,6 +254,8 @@ class Game:
         G_Player_Bullets.update()
         G_Players.update()
         G_Supplies.update()
+        # Before the enemies: the structures follow the platforms they stand on
+        G_Scenery.update()
         G_Enemys.update()
         G_Beams.update()
         G_Bomb.update()
@@ -262,6 +265,7 @@ class Game:
         ScreenFX.set_low_health(self.player.is_active and self.player.health <= self.player.LOW_HEALTH)
         ScreenFX.update()
         self.scoreboard.update()
+        self.route.update()
         if GameSettings.show_fps:
             self.fps_counter.update()
         self.ui.update()
@@ -326,6 +330,7 @@ class Game:
         offset = ScreenShake.offset
 
         self.background.draw(self.screen)
+        G_Scenery.draw(self.screen)
         # Test panel behind the sprites so it never hides them. It is drawn against the
         # shake offset: the world is scrolled afterwards, so the panel ends up still
         if TestMode.enabled:
@@ -363,6 +368,7 @@ class Game:
         ScreenFX.draw(self.screen)
         self.ui.blit()
         self.scoreboard.blit()
+        self.route.blit()
         if GameSettings.show_fps:
             self.fps_counter.blit()
         ScreenFX.draw_overlay(self.screen)
@@ -427,7 +433,7 @@ class Game:
         ScreenFX.reset()
 
         # Kill every sprite so it also leaves the per-class groups (e.g. EnemyScout.GROUP)
-        for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Texts, G_Beams, G_Enemys,
+        for group in [G_BOSS, G_Enemy_Bullets, G_Bomb, G_Effects, G_Texts, G_Beams, G_Enemys, G_Scenery,
                       G_Player_Bullets, G_Supplies, G_Player1, G_Players]:
             for sprite in group.sprites():
                 sprite.kill()
