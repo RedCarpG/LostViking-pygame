@@ -1,202 +1,102 @@
-""" Generate the Oracle sprite sheets (src/asset/image/Enemy/Oracle/...)
+""" Generate the Oracle sprite sheets in the chibi style (src/asset/image/Enemy/Oracle/...)
 
-Development tool. The Oracle is the Protoss harasser of StarCraft II: a copper hull with a
-big crystal, violet claw blades in front and two rear fins. It is drawn at 1x like the other
-enemies (no art existed for it), with their palette: every part is shaded from its distance to
-the edge (a bevel lit from the upper left) in a few hard steps, with a dark outline.
-Faces down, engines at the top. Each sheet has 6 frames side by side:
+Development tool. The Oracle is the Protoss harasser of StarCraft II: a copper hull with a big
+crystal, violet claw blades in front, two rear fins and two engines. Faces down, engines at the
+top, drawn at art size (the game shows it at 2x). Each sheet has 6 frames side by side:
     OracleNormal   flickering engine flames, the crystal pulsing
-    OracleHit      red silhouette fading (drawn over the ship when it is hit)
+    OracleHit      red flash (drawn over the ship when it is hit)
     OracleAttack   cyan glints gathering at the crystal and the claw tips (charging its beam)
     OracleDestroy  the ship darkening to a black silhouette
     OracleBase     the first frame
 
-Run from the project root:  python tools/pixel_art/make_oracle.py
+Run from the project root:  python tools/pixel_art/make_oracle.py [preview.png]
 """
 import math
 import os
+import sys
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
-from shading import BAYER, mask_of, distance, shade, outline, seam, silhouette, darken, save_sheet
+from chibi import Art, COPPER, GOLD, VIOLET, CYAN, P_OUTLINE, FRAMES, finish, hit_frames, destroy_frames, \
+    save, flame, preview
 
 OUT = "src/asset/image/Enemy/Oracle"
-FRAMES = 6
-
-W, H = 64, 78
-CX = (W - 1) / 2
-# Room above the ship for the engine flames
-TOP = 10
-
-OUTLINE = (64, 21, 21)
-COPPER = [(147, 42, 42), (186, 69, 41), (212, 102, 33), (223, 118, 53), (235, 145, 89), (245, 183, 102), (255, 230, 198)]
-VIOLET = [(48, 30, 110), (75, 44, 155), (72, 59, 176), (80, 90, 186), (79, 121, 190), (91, 138, 200), (159, 194, 239)]
-CYAN = [(24, 133, 138), (97, 225, 231), (4, 244, 255), (146, 250, 255), (235, 254, 255)]
-WHITE = (246, 246, 246)
+W, H = 34, 46
+CX = 16.5
+CYAN_FLAME = (CYAN[0], CYAN[1], CYAN[2], CYAN[3])
 
 
-def mirror(points):
-    """ Left half outline -> full polygon """
-    return points + [(W - 1 - x, y) for x, y in reversed(points)]
+def parts(art):
+    hull = art.ellipse(CX, 19, 5.6, 9.5) | art.poly([(13, 24), (20, 24), (CX, 32)])
+    crystal = art.ellipse(CX, 20.5, 3.2, 4.2)
+    claws = art.both(art.poly([(11.5, 15), (5.5, 20), (3.5, 28), (5.5, 36), (10.5, 41), (13.5, 42), (11.5, 36),
+                               (8.5, 29), (9.5, 22), (12.5, 20)])) - hull
+    inner = art.both(art.poly([(11.5, 16.5), (7, 21), (5.5, 28), (7.2, 35), (11, 39.5), (11, 36),
+                               (9.5, 29), (10.3, 22.5), (12.5, 21)]))
+    rims = {p for p in claws if p not in inner}
+    fins = art.both(art.poly([(13, 12), (7, 6), (5, 7), (8, 12), (12, 15)])) - hull
+    engines = art.ellipse(CX - 2.5, 10, 1.6, 2) | art.ellipse(CX + 2.5, 10, 1.6, 2)
+    return dict(hull=hull, crystal=crystal, claws=claws - rims, rims=rims, fins=fins, engines=engines)
 
 
-def mirror_part(points):
-    return [points, [(W - 1 - x, y) for x, y in points]]
-
-
-# ------------------ Parts ------------------
-HULL = mirror([(28, 8), (25, 13), (22, 22), (21, 32), (23, 43), (27, 52), (30, 58)])
-CLAW_L = [(22, 25), (14, 29), (8, 37), (6, 47), (8, 57), (13, 65), (20, 72), (25, 75), (22, 68), (18, 60),
-          (15, 51), (15, 43), (18, 37), (23, 33)]
-FIN_L = [(25, 12), (14, 3), (10, 4), (15, 12), (22, 20)]
-CRYSTAL = (CX, 33, 5.5, 7.5)
-NOZZLES = [(26, 5, 4, 5), (34, 5, 4, 5)]
-
-
-def base_ship():
-    canvas = pygame.Surface((W, H), pygame.SRCALPHA)
-    hull = mask_of([HULL], (W, H))
-    claws = mask_of(mirror_part(CLAW_L), (W, H)) - hull
-    fins = mask_of(mirror_part(FIN_L), (W, H)) - hull
-    nozzles = set()
-    for x0, y0, w, h in NOZZLES:
-        nozzles |= {(x, y) for x in range(x0, x0 + w) for y in range(y0, y0 + h)}
-    nozzles -= hull
-    everything = hull | claws | fins | nozzles
-
-    shade(canvas, claws, VIOLET, bevel=2.5, gradient=0.3)
-    shade(canvas, fins, VIOLET, bevel=2.0, bias=0.1)
-    # Copper rim on the outer edge of the claws and fins
-    for part in (claws, fins):
-        d = distance(part)
-        for (x, y) in part:
-            outer = (x < CX and (x - 1, y) not in part) or (x > CX and (x + 1, y) not in part)
-            if d[(x, y)] == 1 and outer:
-                canvas.set_at((x, y), COPPER[5] if y < 50 else COPPER[3])
-    shade(canvas, hull, COPPER, bevel=4.0, contrast=2.2, dither=0.05)
-    shade(canvas, nozzles, COPPER, bevel=1.5, bias=-0.2)
-    seam(canvas, claws, hull, OUTLINE)
-    seam(canvas, fins, hull, OUTLINE)
-
-    # Ridge along the hull, panel lines
-    for y in range(11, 25):
-        canvas.set_at((int(CX), y), COPPER[6] if y < 18 else COPPER[5])
-        canvas.set_at((int(CX) + 1, y), COPPER[3])
-    for y in range(42, 55):
-        canvas.set_at((int(CX), y), COPPER[5])
-        canvas.set_at((int(CX) + 1, y), COPPER[2])
-    for x in range(24, 40):
-        if (x, 40) in hull:
-            canvas.set_at((x, 40), COPPER[0])
-    # Gold bands across the claws, cyan lights on the hull beside the crystal
-    for band_y in (34, 50):
-        for x in range(W // 2):
-            if (x, band_y) in claws:
-                canvas.set_at((x, band_y), COPPER[5])
-                canvas.set_at((W - 1 - x, band_y), COPPER[5])
-    for x, y in ((23, 29), (23, 37)):
-        canvas.set_at((x, y), CYAN[2])
-        canvas.set_at((W - 1 - x, y), CYAN[2])
-
-    outline(canvas, everything, OUTLINE)
-    return canvas, everything
-
-
-def crystal(canvas, glow=0.0):
-    cx, cy, rx, ry = CRYSTAL
-    for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
-        for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
-            r = math.hypot((x - cx) / rx, (y - cy) / ry)
-            if r <= 1.0:
-                # Brighter toward the upper left
-                v = 1 - r + 0.25 * (-(x - cx) / rx - (y - cy) / ry) * 0.5 + glow * 0.35
-                v += (BAYER[y & 3][x & 3] / 16 - 0.5) * 0.15
-                canvas.set_at((x, y), CYAN[max(0, min(len(CYAN) - 1, int(v * len(CYAN) + 0.6)))])
-            elif r <= 1.18:
-                canvas.set_at((x, y), OUTLINE if r > 1.1 else COPPER[0])
-    # Specular
-    canvas.set_at((int(cx) - 2, int(cy) - 4), WHITE)
-    canvas.set_at((int(cx) - 1, int(cy) - 4), WHITE)
-    canvas.set_at((int(cx) - 2, int(cy) - 3), WHITE)
-
-
-def flames(canvas, frame):
-    """ Feathery cyan flames over the two nozzles, flickering from frame to frame """
-    heights = (7, 9, 8, 10, 7, 9)
-    for i, (x0, y0, w, h) in enumerate(NOZZLES):
-        y0 += TOP
-        height = heights[(frame + i * 3) % 6]
-        top = y0 - height
-        for y in range(max(0, top), y0):
-            t = (y0 - y) / height
-            # Narrows toward the tip, wobbling
-            half = (w / 2 + 0.6) * (1 - t * 0.75) + 0.4 * math.sin((y + frame * 2 + i) * 1.3)
-            cx = x0 + (w - 1) / 2
-            for x in range(x0 - 1, x0 + w + 1):
-                dist = abs(x - cx)
-                if dist > half:
-                    continue
-                if dist < half * 0.4 and t < 0.45:
-                    color = CYAN[4]
-                elif t < 0.75:
-                    color = CYAN[3] if dist < half * 0.7 else CYAN[2]
-                else:
-                    color = CYAN[1]
-                canvas.set_at((x, y), color)
-        # A spark above the flame
-        spark_y = top - 1 - (frame % 3)
-        if spark_y >= 0:
-            canvas.set_at((x0 + (frame + i) % w, spark_y), CYAN[3])
-
-
-def frame(index):
-    ship, mask = base_ship()
-    crystal(ship, glow=0.5 + 0.5 * math.sin(index / 6 * math.tau))
+def oracle(frame):
+    art = Art(W, H)
+    p = parts(art)
+    art.cel(p["fins"], VIOLET, bevel=1.5)
+    art.cel(p["claws"], VIOLET, bevel=2)
+    art.cel(p["rims"], GOLD, bevel=1.2)
+    art.cel(p["engines"], COPPER, bevel=1.5)
+    art.dome(p["hull"], CX, 21, 7, 12, COPPER)
+    # The crystal pulses
+    glow = 0.5 + 0.5 * math.sin(frame / FRAMES * math.tau)
+    art.dome(p["crystal"], CX, 20.5, 3.2, 4.2, CYAN, high=0.55 - glow * 0.15, low=0.2 - glow * 0.1)
+    art.px(CX - 1.5, 18, CYAN[3])
+    art.px(CX - 0.5, 17, CYAN[3])
+    art.seam(p["crystal"], p["hull"] - p["crystal"], P_OUTLINE)
+    art.seam(p["claws"] | p["rims"], p["hull"], P_OUTLINE)
     # Lights at the claw tips
-    on = index % 3 != 2
-    for x, y in ((22, 70), (W - 23, 70)):
-        ship.set_at((x, y), CYAN[3] if on else CYAN[0])
-    canvas = pygame.Surface((W, H + TOP), pygame.SRCALPHA)
-    canvas.blit(ship, (0, TOP))
-    flames(canvas, index)
-    return canvas
+    for x in (11.5, 21.5):
+        art.px(x, 40, CYAN[3] if frame % 3 != 2 else CYAN[0])
+    hull = set().union(*p.values())
+    flames = set()
+    for i, x in enumerate((CX - 2.5, CX + 2.5)):
+        flames |= flame(art.c, x + 0.5, 7, (3, 4, 3, 4, 3, 4)[(frame + i) % FRAMES], 2.4, CYAN_FLAME, down=False)
+    return finish(art.c, hull, P_OUTLINE, extra=flames)
 
 
-# ------------------ Sheets ------------------
-
-def attack_frame(ship, index):
-    """ Glints gathering at the crystal and the claw tips, brighter every frame """
-    c = pygame.Surface(ship.get_size(), pygame.SRCALPHA)
-    t = (index + 1) / FRAMES
-    cx, cy = CX, CRYSTAL[1] + TOP
-    reach = 4 + 8 * t
+def attack(frame):
+    """ Glints gathering at the crystal and the claw tips """
+    c = pygame.Surface((W, H), pygame.SRCALPHA)
+    t = (frame + 1) / FRAMES
     for k in range(8):
-        angle = k / 8 * math.tau + index * 0.4
-        for r in range(int(reach * 0.5), int(reach)):
-            x, y = round(cx + math.cos(angle) * (r + 6)), round(cy + math.sin(angle) * (r + 8))
-            c.set_at((x, y), CYAN[3] if r < reach * 0.8 else CYAN[2])
-    for x, y in ((22, 70 + TOP), (W - 23, 70 + TOP)):
-        size = 1 + index // 2
-        pygame.draw.line(c, CYAN[3], (x - size, y), (x + size, y))
-        pygame.draw.line(c, CYAN[3], (x, y - size), (x, y + size))
-        c.set_at((x, y), CYAN[4])
+        a = k / 8 * math.tau + frame * 0.4
+        r = 9 * (1 - t) + 4
+        x, y = round(CX + math.cos(a) * r), round(20.5 + math.sin(a) * r)
+        c.set_at((x, y), CYAN[3] if k % 2 else (255, 255, 255))
+    size = 1 + frame // 2
+    for x in (11.5, 21.5):
+        for i in range(-size, size + 1):
+            c.set_at((round(x + i), 40), CYAN[2])
+            c.set_at((round(x), 40 + i), CYAN[2])
     return c
-
-
-def sheet_path(name):
-    return os.path.join(OUT, f"Oracle{name}.png")
 
 
 def main():
     pygame.init()
-    os.makedirs(OUT, exist_ok=True)
-    normal = [frame(i) for i in range(FRAMES)]
-    save_sheet(normal, sheet_path("Normal"))
-    save_sheet([normal[0]] * FRAMES, sheet_path("Base"))
-    save_sheet([silhouette(normal[0], (190, 24, 24), a) for a in (150, 200, 160, 120, 80, 40)], sheet_path("Hit"))
-    save_sheet([attack_frame(normal[0], i) for i in range(FRAMES)], sheet_path("Attack"))
-    save_sheet([darken(normal[0], i) for i in range(FRAMES)], sheet_path("Destroy"))
+    normal = [oracle(i) for i in range(FRAMES)]
+    sheets = {
+        "Normal": normal,
+        "Base": [normal[0]] * FRAMES,
+        "Hit": hit_frames(normal[0], (170, 120, 70)),
+        "Attack": [attack(i) for i in range(FRAMES)],
+        "Destroy": destroy_frames(normal[0]),
+    }
+    if len(sys.argv) > 1:
+        preview(sys.argv[1], [f for frames in sheets.values() for f in frames])
+        return
+    for name, frames in sheets.items():
+        save(frames, os.path.join(OUT, f"Oracle{name}.png"))
 
 
 if __name__ == "__main__":

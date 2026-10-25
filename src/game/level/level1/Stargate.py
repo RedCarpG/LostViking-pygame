@@ -16,7 +16,7 @@ from src.game.groups import G_Player1
 from src.game.animation import AttachEffect, ScreenShake, ScreenFX, FloatingText
 from src.game.animation.FloatingText import WARNING_COLOR
 from src.game.animation.ScreenFX import WARP_RING_COLORS
-from src.helper.image import get_image, get_scaled_image
+from src.helper.image import get_image, ART_SCALE
 from src.helper.sound import play_sound
 from src.util.type import Pos
 from .Carrier import EnemyCarrier
@@ -26,18 +26,12 @@ from .Phoenix import EnemyPhoenix
 from .Scout import EnemyScout
 from .WarpIn import WarpIn
 
-SCALE = 2
 SHEETS = ("Idle", "Attack", "Base", "Hit", "Destroy")
 IMAGES = [f"Structure/Stargate/Stargate{name}.png" for name in SHEETS]
 
 
 def _sheet(name):
-    return get_scaled_image(f"Structure/Stargate/Stargate{name}.png", SCALE)
-
-
-def prepare_images():
-    for name in SHEETS:
-        _sheet(name)
+    return get_image(f"Structure/Stargate/Stargate{name}.png")
 
 
 class EnemyStargate(EnemyBoss):
@@ -54,9 +48,11 @@ class EnemyStargate(EnemyBoss):
     ACC_Y = 0.012
     STOP_TOP = 20
 
-    # Middle of the portal and of the cannon pads in the image (see make_structures.py)
-    PORTAL = (155, 101)
-    CANNON_PADS = [(17 * SCALE + 1, 74 * SCALE + 1), (138 * SCALE + 1, 74 * SCALE + 1)]
+    # Middle of the portal and of the cannon pads in the image, in art pixels (see make_structures.py:
+    # the rim adds one pixel all around)
+    PORTAL = ((77.5 + 1) * ART_SCALE + 1, (50 + 1) * ART_SCALE + 1)
+    CANNON_PADS = [((17 + 1) * ART_SCALE + 1, (74 + 1) * ART_SCALE + 1),
+                   ((138 + 1) * ART_SCALE + 1, (74 + 1) * ART_SCALE + 1)]
 
     ATTACK_SPEED = 170
     FIRST_ATTACK_DELAY = 90

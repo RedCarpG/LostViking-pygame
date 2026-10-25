@@ -19,8 +19,9 @@ import sys
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
-from shading import dither, mask_of, rect_mask, ellipse_mask, distance, shade, outline, seam, \
-    silhouette, darken, save_sheet
+from shading import dither, mask_of, rect_mask, ellipse_mask, distance, outline, seam, silhouette, darken, \
+    save_sheet
+from chibi import RIM, cel, ring, opaque
 
 OUT = "src/asset/image/Structure"
 FRAMES = 6
@@ -43,6 +44,26 @@ T_OUTLINE = (16, 16, 24)
 RED = [(110, 10, 16), (184, 0, 0), (232, 40, 40)]
 YELLOW = [(120, 84, 10), (214, 160, 30), (250, 210, 80)]
 GREEN = (80, 230, 120)
+
+
+def shade(c, mask, ramp, bevel=3.0, bias=0.0, **_):
+    """ Cel shading in the style of the ships (see chibi.py): four colors of `ramp`, `bias` moves
+    them toward the dark or the light end
+    """
+    n = len(ramp)
+    shift = round(bias * n)
+    picks = (0, 1, 2, 3) if n <= 4 else (1, n // 2 - (1 if n > 5 else 0), n - 2, n - 1)
+    cel(c, mask, [ramp[max(0, min(n - 1, i + shift))] for i in picks], bevel=bevel)
+
+
+def rimmed(c):
+    """ One more pixel all around and the white rim: the structures that can be shot stand out
+    like the ships (the scenery has no rim)
+    """
+    out = canvas(c.get_width() + 2, c.get_height() + 2)
+    out.blit(c, (1, 1))
+    ring(out, opaque(out), RIM)
+    return out
 
 
 def canvas(w, h):
@@ -221,7 +242,7 @@ def platform(name, frame, powered=True):
 
 
 # ------------------ Stargate ------------------
-# Keep in sync with src/game/level/level1/Stargate.py (PORTAL, CANNON_PADS)
+# Keep in sync with src/game/level/level1/Stargate.py (PORTAL, CANNON_PADS; the rim adds a pixel on each side)
 GATE_W, GATE_H = 156, 118
 GATE_PORTAL = (77.5, 50, 27, 22)
 GATE_PADS = [(17, 74), (138, 74)]
@@ -325,7 +346,7 @@ def starport(frame):
     hull = mask_of([[(22, 26), (178, 26), (198, 44), (199, h - 1), (0, h - 1), (1, 44)]], (w, h))
     pad = mask_of([octagon(px, py, 24)], (w, h))
     hull -= pad
-    shade(c, hull, STEEL, bevel=5.0, contrast=1.5, gradient=0.35, bias=-0.15, dither=0.1)
+    shade(c, hull, STEEL, bevel=5.0)
     # Plates: panel lines and rivets
     for y in (62, 86, 108):
         for x in range(2, w - 2):
@@ -422,17 +443,17 @@ def preview(path, images):
 def main():
     pygame.init()
     sheets = {
-        "PhotonCannon/CannonIdle": sheet_frames(cannon),
-        "PhotonCannon/CannonAttack": sheet_frames(lambda i: cannon(i, charge=(i + 1) / FRAMES)),
-        "PhotonCannon/CannonUnpowered": sheet_frames(lambda i: cannon(i, powered=False)),
-        "Pylon/PylonIdle": sheet_frames(pylon),
+        "PhotonCannon/CannonIdle": sheet_frames(lambda i: rimmed(cannon(i))),
+        "PhotonCannon/CannonAttack": sheet_frames(lambda i: rimmed(cannon(i, charge=(i + 1) / FRAMES))),
+        "PhotonCannon/CannonUnpowered": sheet_frames(lambda i: rimmed(cannon(i, powered=False))),
+        "Pylon/PylonIdle": sheet_frames(lambda i: rimmed(pylon(i))),
     }
     for name in PLATFORMS:
         sheets[f"Outpost/Platform{name}"] = sheet_frames(lambda i: platform(name, i))
         sheets[f"Outpost/Platform{name}Unpowered"] = [platform(name, 0, powered=False)]
     sheets["Starport/Starport"] = sheet_frames(starport)
-    sheets["Stargate/StargateIdle"] = sheet_frames(stargate)
-    sheets["Stargate/StargateAttack"] = sheet_frames(lambda i: stargate(i, flare=(i + 1) / FRAMES))
+    sheets["Stargate/StargateIdle"] = sheet_frames(lambda i: rimmed(stargate(i)))
+    sheets["Stargate/StargateAttack"] = sheet_frames(lambda i: rimmed(stargate(i, flare=(i + 1) / FRAMES)))
     sheets["Stargate/StargateBase"] = [sheets["Stargate/StargateIdle"][0]] * FRAMES
     # Faint: the gate is big and hit all the time, a strong flash would hide it
     sheets["Stargate/StargateHit"] = [silhouette(sheets["Stargate/StargateIdle"][0], (190, 24, 24), a)

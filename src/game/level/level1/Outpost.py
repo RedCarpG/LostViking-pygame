@@ -19,11 +19,10 @@ from src.game.enemy import EnemyI, EnemyBullet
 from src.game.groups import G_Scenery, G_Player1
 from src.game.animation import FloatingText, Spark
 from src.game.animation.FloatingText import MAX_COLOR, SCORE_COLOR
-from src.helper.image import get_image, get_scaled_image
+from src.helper.image import get_image, ART_SCALE
 from src.helper.sound import play_sound
 from src.util.type import Pos
 
-SCALE = 2
 # Pixels per frame the platforms drift down
 SCROLL = 1.2
 
@@ -32,7 +31,7 @@ POWER_DOWN_COLORS = ((146, 250, 255), (4, 244, 255), (24, 133, 138))
 
 
 def _sheet(name):
-    return get_scaled_image(f"Structure/{name}.png", SCALE)
+    return get_image(f"Structure/{name}.png")
 
 
 # Image files (for the asset manifest)
@@ -44,12 +43,6 @@ IMAGES = [f"Structure/{name}.png" for name in (
     "Outpost/PlatformSmallL", "Outpost/PlatformSmallLUnpowered",
     "Outpost/PlatformSmallR", "Outpost/PlatformSmallRUnpowered",
 )]
-
-
-def prepare_images():
-    """ Scale the images now (while loading) instead of when the first outpost comes """
-    for name in IMAGES:
-        _sheet(name[len("Structure/"):-len(".png")])
 
 
 class Structure(EnemyI):
@@ -216,7 +209,7 @@ class OutpostPlatform(Sprite):
         self.structures = []
         pylon, cannons = None, []
         for kind, (ax, ay) in structures:
-            offset = (ax * SCALE + 1, ay * SCALE + 1)
+            offset = (ax * ART_SCALE + 1, ay * ART_SCALE + 1)
             if kind == "pylon":
                 pylon = Pylon(self, (offset[0], offset[1] - self.PYLON_RISE))
                 self.structures.append(pylon)

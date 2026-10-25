@@ -401,8 +401,8 @@ class PulsarBeam(Sprite):
     LENGTH = BEAM_ART_LENGTH * PIXEL
     HIT_WIDTH = 20
     DAMAGE = 5
-    # The beam starts this far below the Oracle center
-    NOSE = 34
+    # The beam starts this far below the Oracle center (between the claw tips)
+    NOSE = 36
     HIT_EFFECT_INTERVAL = 4
 
     def __init__(self, oracle) -> None:

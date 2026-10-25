@@ -3,7 +3,7 @@ from pygame import Vector2
 from src.game.enemy import EnemyBoss, EnemyBullet
 from src.game.animation import AttachEffect, ScreenShake, ScreenFX, FloatingText
 from src.game.animation.FloatingText import WARNING_COLOR
-from src.helper.image import get_image, get_scaled_image
+from src.helper.image import get_image
 from src.helper.sound import play_sound
 from src.util.type import Pos
 from src.setting import SCREEN_WIDTH
@@ -16,16 +16,14 @@ from src.game.groups import G_Player1
 
 
 def _sheet(name):
-    return get_scaled_image(f"Enemy/Carrier/{name}.png", EnemyCarrier.SCALE)
+    return get_image(f"Enemy/Carrier/{name}.png")
 
 
 class EnemyCarrier(EnemyBoss):
     NAME = "CARRIER"
-    # Drawn at 2x (an integer scale keeps the pixel art sharp)
-    SCALE = 2
 
-    # The top half of the ship stays above the screen
-    STOP_TOP = -150
+    # The back of the ship stays above the screen
+    STOP_TOP = -110
 
     ARMORED = True
 
@@ -78,10 +76,8 @@ class EnemyCarrier(EnemyBoss):
         self._enrage_shown = False
 
     @classmethod
-    def prepare_images(cls):
-        """ Scale the boss images now (while loading) instead of when it arrives """
-        for name in ("CarrierBase", "CarrierNormal", "CarrierDestroy", "CarrierHit", "CarrierAttack"):
-            _sheet(name)
+    def prepare(cls):
+        """ Make the laser images ahead of time (see CarrierLaser) """
         CarrierLaser.prepare()
 
     @classmethod
@@ -107,7 +103,7 @@ class EnemyCarrier(EnemyBoss):
     @property
     def emitter(self) -> Vector2:
         """ Where bullets come out: the nose of the ship """
-        return Vector2(self.rect.centerx, self.rect.bottom - 40)
+        return Vector2(self.rect.centerx, self.rect.bottom - 30)
 
     def laser_active(self) -> bool:
         return self.laser is not None and self.laser.alive()

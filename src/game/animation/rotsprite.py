@@ -5,8 +5,11 @@ then scale back down. Lines and outlines stay clean, unlike a plain rotation.
 It is slow, so only the angles of the first quarter are computed (once per frame
 of a sheet); the other directions are exact 90 degree turns of them. The work is
 queued while loading and done a little each frame on the main menu (see warmup).
+Sprites shown bigger than their art (see art_source) are turned at art size, then
+scaled: their pixels stay on the art grid.
 """
 import pygame
+from src.helper.image import art_source
 from . import warmup
 
 DIRECTIONS = 32
@@ -40,8 +43,16 @@ def rotated_frame(sheet, rect, angle) -> pygame.Surface:
     key = (id(sheet), tuple(rect), step)
     base = _cache.get(key)
     if base is None:
-        frame = sheet.subsurface(rect)
-        base = frame if step == 0 else _rotsprite(frame, step * STEP)
+        source = art_source(sheet)
+        if step == 0:
+            base = sheet.subsurface(rect)
+        elif source is None:
+            base = _rotsprite(sheet.subsurface(rect), step * STEP)
+        else:
+            art, scale = source
+            art_rect = pygame.Rect(rect.x // scale, rect.y // scale, rect.width // scale, rect.height // scale)
+            turned = _rotsprite(art.subsurface(art_rect), step * STEP)
+            base = pygame.transform.scale(turned, (turned.get_width() * scale, turned.get_height() * scale))
         _cache[key] = base
     return pygame.transform.rotate(base, quarter * 90) if quarter else base
 

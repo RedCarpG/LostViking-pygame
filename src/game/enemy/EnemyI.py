@@ -38,8 +38,9 @@ class EnemyI(AnimeSprite, BasicEnemy):
     # rotated image grows with the angle. None uses the rect (see collide_detect)
     HITBOX = None
 
-    # Hit feedback: frames of white flash and pixels pushed back per hit
+    # Hit feedback: frames of white flash (light added to the image) and pixels pushed back per hit
     FLASH_DURATION = 3
+    FLASH_COLOR = (190, 190, 190)
     KNOCKBACK = 2
 
     # Explosion when destroyed (see Explosion.SIZES)
@@ -149,7 +150,7 @@ class EnemyI(AnimeSprite, BasicEnemy):
                 # New animation frame (or first flash frame): make a white copy of it
                 self._normal_image = self.image
                 self._flash_image = self.image.copy()
-                self._flash_image.fill((190, 190, 190), special_flags=pygame.BLEND_RGB_ADD)
+                self._flash_image.fill(self.FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
                 self.image = self._flash_image
             self._count_flash -= 1
         elif self._flash_image is not None:

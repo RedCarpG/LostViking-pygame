@@ -8,17 +8,16 @@ from pygame.sprite import Sprite
 
 from src.setting import SCREEN_HEIGHT
 from src.game.groups import G_Scenery
-from src.helper.image import get_scaled_image
+from src.helper.image import get_image, ART_SCALE
 from src.helper.sound import play_sound
 
-SCALE = 2
 IMAGE = "Structure/Starport/Starport.png"
 
 
 class TerranStarport(Sprite):
 
     # Middle of the launch pad in the image (art pixels (100, 40), see make_structures.py)
-    PAD = (100 * SCALE + 1, 40 * SCALE + 1)
+    PAD = (100 * ART_SCALE + 1, 40 * ART_SCALE + 1)
     # Frames it waits before the plane takes off, then it speeds up to MAX_SPEED
     HOLD = 60
     ACCELERATION = 0.05
@@ -28,7 +27,7 @@ class TerranStarport(Sprite):
     def __init__(self, pad_center) -> None:
         """ :param pad_center: where the plane stands """
         super().__init__(G_Scenery)
-        sheet = get_scaled_image(IMAGE, SCALE)
+        sheet = get_image(IMAGE)
         width = sheet.get_width() // 6
         self._frames = [sheet.subsurface((i * width, 0, width, sheet.get_height())) for i in range(6)]
         self.image = self._frames[0]

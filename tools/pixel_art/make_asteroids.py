@@ -1,9 +1,9 @@
 """ Generate the asteroid sprite sheets (src/asset/image/Enemy/Asteroid/...)
 
 Development tool. Each rock is a lumpy dome (a random outline made of a few waves) with
-craters and small bumps. It spins: every frame turns the rock, then lights it again from
-the upper left, so the light stays where it is while the rock turns. The shading is cut
-into a few colors with an ordered dither, like the planets of the background.
+craters and a few bumps. It spins: every frame turns the rock, then lights it again from
+the upper left, so the light stays where it is while the rock turns. Chibi style like the ships
+(see chibi.py): the light is cut into four flat bands, with a dark outline and the white rim.
 The grey rocks carry blue mineral crystals (the Minerals of StarCraft).
 
 Drawn at art size and scaled 2x by the game. Each sheet holds SPIN_FRAMES frames side by side:
@@ -18,18 +18,21 @@ import random
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
-from shading import dither, save_sheet
+from shading import save_sheet
+from chibi import N_OUTLINE, finish, opaque
 
 OUT = "src/asset/image/Enemy/Asteroid"
 # Frames per turn (keep in sync with Asteroid.SPIN_FRAMES)
 SPIN_FRAMES = 16
 
-# Art pixels: (radius, canvas size)
-SIZES = {"Large": (19, 44), "Medium": (12, 30), "Small": (7, 18)}
+# Art pixels: (radius, canvas size, room left for the outline and the rim)
+SIZES = {"Large": (19, 48), "Medium": (12, 34), "Small": (7, 22)}
 
-BROWN = [(36, 30, 40), (60, 48, 54), (88, 70, 68), (120, 98, 86), (154, 128, 106), (188, 164, 134)]
-GREY = [(30, 32, 46), (52, 56, 72), (80, 86, 102), (112, 118, 132), (146, 152, 164), (182, 188, 198)]
-MINERAL = [(22, 96, 150), (52, 168, 226), (138, 226, 255), (232, 252, 255)]
+# Shadow, base, light, highlight
+BROWN = [(78, 60, 66), (134, 106, 92), (180, 150, 120), (224, 204, 170)]
+GREY = [(64, 68, 90), (112, 118, 136), (158, 164, 180), (208, 214, 224)]
+MINERAL = [(30, 120, 180), (70, 200, 245), (190, 245, 255)]
+BANDS = (0.36, 0.64, 0.86)
 
 _L = (-0.55, -0.6, 0.58)
 _n = math.sqrt(sum(v * v for v in _L))
@@ -50,7 +53,7 @@ class Rock:
                                  rng.uniform(0.18, 0.34) * radius, rng.uniform(0.25, 0.45)))
         # Small bumps and pits all over
         self.bumps = [(rng.uniform(-1, 1) * radius, rng.uniform(-1, 1) * radius,
-                       rng.uniform(1.2, 2.6), rng.uniform(-1.0, 1.1)) for _ in range(radius * 3)]
+                       rng.uniform(1.8, 3.2), rng.uniform(-0.9, 1.0)) for _ in range(radius // 2)]
         self.minerals = []
         if minerals:
             for _ in range(max(2, radius // 5)):
@@ -113,15 +116,13 @@ def render(rock, angle, ramp, size):
             n = (-gx, -gy, 1.0)
             norm = math.sqrt(n[0] ** 2 + n[1] ** 2 + n[2] ** 2)
             light = max(0.0, sum(a * b for a, b in zip(n, LIGHT)) / norm)
-            # Strong steps: a lit top, a dark side toward the lower right
-            value = (light - 0.15) * 1.35 + 0.05 + dither(x, y) * 0.16
-            color = ramp[max(0, min(len(ramp) - 1, int(value * len(ramp))))]
+            # Four flat bands: a lit top, a dark side toward the lower right
+            color = ramp[sum(light > band for band in BANDS)]
             crystal = rock.mineral(*local(x, y))
             if crystal > 0:
-                level = max(0, min(len(MINERAL) - 1, int((crystal * 1.4 + light * 1.2) * len(MINERAL) / 2)))
-                color = MINERAL[level]
+                color = MINERAL[2 if crystal > 0.55 else 1 if light > 0.5 else 0]
             c.set_at((x, y), color)
-    return c
+    return finish(c, opaque(c), N_OUTLINE)
 
 
 def main():

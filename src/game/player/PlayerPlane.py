@@ -65,6 +65,11 @@ class PlayerPlane(AnimeSprite):
     # Frames to switch weapons (the Viking transforms), no shot meanwhile
     TRANSFORM_FRAMES = 24
 
+    # Fixed collision box (width, height) and its offset from the rect center, None: the rect, scaled
+    # (see collide_detect)
+    HITBOX = None
+    HITBOX_OFFSET = (0, 0)
+
     def __init__(self, weapons: list, pos, frames, frame_size, id=1):
         """ :param weapons: the weapons the plane switches between (they share the level) """
         # Init
@@ -520,6 +525,14 @@ class PlayerPlane(AnimeSprite):
         self._score += enemy.score
         self.kills += 1
         FloatingText(enemy.rect.center, f"{enemy.score:,}")
+
+    @property
+    def hitbox(self):
+        if self.HITBOX is None:
+            return None
+        box = pygame.Rect(0, 0, *self.HITBOX)
+        box.center = (self.rect.centerx + self.HITBOX_OFFSET[0], self.rect.centery + self.HITBOX_OFFSET[1])
+        return box
 
     # ----- Position
     @property

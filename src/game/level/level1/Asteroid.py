@@ -4,7 +4,7 @@ Spinning rocks in three sizes drifting down. A large rock breaks into two medium
 a medium rock into two small ones. Large and medium rocks are armored: the Lanzer Torpedoes
 crack them faster, the gatling is better against the small ones. Flying into a rock hurts
 and breaks it. The sheets (SPIN_FRAMES frames of a turn, lit from a fixed light) are made by
-tools/pixel_art/make_asteroids.py and drawn at 2x.
+tools/pixel_art/make_asteroids.py.
 """
 import random
 
@@ -15,7 +15,7 @@ from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.game.enemy import EnemyI
 from src.game.animation import Spark
 from src.game.animation.pixel_fx import PIXEL
-from src.helper.image import get_scaled_image
+from src.helper.image import get_image
 from src.util.type import Pos, Size
 
 # Debris colors, from the first to the last frame of a piece
@@ -27,7 +27,7 @@ VARIANTS = (0, 1)
 
 
 def _sheet(size, variant):
-    return get_scaled_image(f"Enemy/Asteroid/Asteroid{size}{variant}.png", Asteroid.SCALE)
+    return get_image(f"Enemy/Asteroid/Asteroid{size}{variant}.png")
 
 
 def images():
@@ -36,16 +36,7 @@ def images():
             for variant in VARIANTS]
 
 
-def prepare_images():
-    """ Scale the rocks now (while loading) instead of when the first one comes """
-    for cls in (AsteroidLarge, AsteroidMedium, AsteroidSmall):
-        for variant in VARIANTS:
-            _sheet(cls.SIZE, variant)
-
-
 class Asteroid(EnemyI):
-    # Drawn at 2x, like the background
-    SCALE = 2
     # Frames of a turn in the sheets (see make_asteroids.py)
     SPIN_FRAMES = 16
 

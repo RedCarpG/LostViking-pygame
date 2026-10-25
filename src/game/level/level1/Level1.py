@@ -136,11 +136,7 @@ class Level1:
 
     def __init__(self) -> None:
         load_images(IMAGES)
-        # Images drawn at 2x: scale them now, not when they come
-        EnemyCarrier.prepare_images()
-        asteroid.prepare_images()
-        Outpost.prepare_images()
-        Stargate.prepare_images()
+        EnemyCarrier.prepare()
 
         # Pixel-art rotations of the enemies that turn, prepared before play so turning costs
         # nothing in a round (the Phoenix "Fast" frames only fly at 90 degrees: no rotation needed)
