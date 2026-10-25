@@ -3,7 +3,8 @@
 Spinning rocks in three sizes drifting down. A large rock breaks into two medium rocks,
 a medium rock into two small ones. Large and medium rocks are armored: the Lanzer Torpedoes
 crack them faster, the gatling is better against the small ones. Flying into a rock hurts
-and breaks it. The sheets (SPIN_FRAMES frames of a turn, lit from a fixed light) are made by
+and breaks it. Rocks are cover: enemy shots stop at them and chip them (beams go through),
+and a rock broken by enemy fire gives no points. The sheets (SPIN_FRAMES frames of a turn, lit from a fixed light) are made by
 tools/pixel_art/make_asteroids.py.
 """
 import random
@@ -12,7 +13,8 @@ from pygame import Vector2
 from pygame.sprite import Group
 
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
-from src.game.enemy import EnemyI
+from src.game.enemy import EnemyI, EnemyBullet
+from src.game.groups import G_Enemy_Bullets
 from src.game.animation import Spark
 from src.game.animation.pixel_fx import PIXEL
 from src.helper.image import get_image
@@ -96,6 +98,26 @@ class Asteroid(EnemyI):
         if self.rect.top > SCREEN_HEIGHT + self.MARGIN or self.rect.right < -self.MARGIN \
                 or self.rect.left > SCREEN_WIDTH + self.MARGIN:
             self.kill()
+            return
+        self._block_shots()
+
+    def _block_shots(self) -> None:
+        """ Enemy shots that reach the rock stop there and chip it (the beams go through) """
+        box = self.hitbox
+        for shot in G_Enemy_Bullets.sprites():
+            if isinstance(shot, EnemyBullet) and box.colliderect(shot.rect):
+                shot.hit(target=self)
+                self._chip(shot.damage)
+                if not self.is_active:
+                    return
+
+    def _chip(self, damage) -> None:
+        """ Damage from enemy fire: a flash only (no hit sound), and a rock it breaks drops nothing """
+        self._health -= damage
+        if self._health > 0:
+            self._count_flash = self.FLASH_DURATION
+        else:
+            self.destroy(drop_supply=False)
 
     def shoot(self, target):
         pass

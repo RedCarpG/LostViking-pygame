@@ -45,6 +45,7 @@ of the screen, has stages, each announced by its name:
 1. **Launch**: the Viking takes off from the launch pad of the Terran Starport.
 2. **Asteroid field**: spinning rocks drift down, a large rock breaks into two medium rocks, a medium
    rock into two small ones. Flying into a rock hurts. Large and medium rocks are armored.
+   Rocks are cover: enemy shots stop at them (beams go through), and enemy fire chips them too.
 3. **Protoss patrol**: Scout formations, Phoenixes, an Oracle.
 4. **Protoss outposts**: floating platforms with a **Pylon** and **Photon Cannons** (fixed turrets
    firing at you). The Pylon powers the cannons of its platform: destroy it and they go dark.

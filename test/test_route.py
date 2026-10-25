@@ -103,6 +103,34 @@ def test_flying_into_a_rock_hurts_and_breaks_it(round_game):
     _clear(round_game)
 
 
+def test_rocks_stop_enemy_shots(round_game):
+    from src.game.level.level1.Scout import BulletScout
+    _clear(round_game)
+    player = _vulnerable(round_game)
+    x = player.rect.centerx
+    rock = AsteroidLarge(Pos([x, player.rect.top - 160]), Vector2(0, 0))
+    BulletScout(Pos([x, player.rect.top - 320]))
+    run(round_game, 100)
+    # The plane hides behind the rock: the shot stopped there and chipped it
+    assert player.health == player.MAX_HEALTH
+    assert rock.health == AsteroidLarge.MAX_HEALTH - BulletScout.DAMAGE
+    assert not any(isinstance(each, BulletScout) for each in G_Enemy_Bullets)
+    _clear(round_game)
+
+
+def test_enemy_fire_breaks_rocks_for_no_points(round_game):
+    from src.game.level.level1.Scout import BulletScout
+    _clear(round_game)
+    player = round_game.player
+    rock = AsteroidSmall(Pos([300, 400]), Vector2(0, 0))
+    for i in range(4):
+        BulletScout(Pos([300, 300 - i * 40]))
+    run(round_game, 120)
+    assert not rock.alive() and not rock.is_active
+    assert player.score == 0 and player.kills == 0
+    _clear(round_game)
+
+
 def test_rocks_spin(round_game):
     _clear(round_game)
     rock = AsteroidSmall(Pos([500, 300]), Vector2(0, 0))
