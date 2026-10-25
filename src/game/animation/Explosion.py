@@ -49,10 +49,15 @@ _variants = {}
 
 
 def prepare() -> None:
-    """ Make the fireballs ahead of time (see warmup) """
+    """ Make the fireballs and their turned / flipped variants ahead of time (see warmup):
+    a variant made on its first use cost a few milliseconds in the middle of a fight
+    """
     for name in SIZES:
         if name not in _frames:
             warmup.add(_build(name))
+        for index in range(1, 8):
+            if (name, index) not in _variants:
+                warmup.add(lambda name=name, index=index: _variant(name, index))
 
 
 def _get_frames(name):
@@ -213,18 +218,22 @@ class Explosion(Sprite):
 
 
 class Spark(Sprite):
-    """ A hot pixel flying out of an explosion: it slows down and cools from white to red """
+    """ A hot pixel flying out of an explosion: it slows down and cools from white to red.
+    With other `colors` it is a piece of something that broke (crystal shards, rock debris)
+    """
 
     DRAG = 0.9
 
-    def __init__(self, pos, velocity, life, size=PIXEL) -> None:
+    def __init__(self, pos, velocity, life, size=PIXEL, colors=SPARK_COLORS, drag=DRAG) -> None:
         super().__init__(G_Effects)
         self._pos = Vector2(pos)
         self._velocity = Vector2(velocity)
         self._life = life
         self._age = 0
         self._size = size
-        self.image = _spark_image(SPARK_COLORS[0], size)
+        self._colors = colors
+        self._drag = drag
+        self.image = _spark_image(colors[0], size)
         self.rect = self.image.get_rect(center=pos)
 
     @classmethod
@@ -234,14 +243,21 @@ class Spark(Sprite):
             size = PIXEL * 2 if random.random() < 0.3 else PIXEL
             cls(pos, velocity, random.randint(12, 26), size)
 
+    @classmethod
+    def shards(cls, pos, count, colors, speed=(3, 6), life=16, size=PIXEL * 2, drag=0.88):
+        """ `count` pieces flying out all around, evenly spread, fading through `colors` """
+        for k in range(count):
+            velocity = Vector2(0, 1).rotate(k * 360 / count + random.uniform(-10, 10)) * random.uniform(*speed)
+            cls(pos, velocity, life, size, colors, drag)
+
     def update(self):
         self._age += 1
         if self._age >= self._life:
             self.kill()
             return
         self._pos += self._velocity
-        self._velocity *= self.DRAG
-        color = SPARK_COLORS[self._age * len(SPARK_COLORS) // self._life]
+        self._velocity *= self._drag
+        color = self._colors[self._age * len(self._colors) // self._life]
         self.image = _spark_image(color, self._size)
         # Snap to the pixel grid of the art
         self.rect.topleft = (int(self._pos.x) // PIXEL * PIXEL, int(self._pos.y) // PIXEL * PIXEL)

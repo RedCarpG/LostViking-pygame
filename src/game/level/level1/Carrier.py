@@ -1,28 +1,31 @@
 import random
-import pygame
 from pygame import Vector2
 from src.game.enemy import EnemyBoss, EnemyBullet
-from src.game.animation import AttachEffect, Effect
-from src.helper.image import get_image, get_scaled_image
+from src.game.animation import AttachEffect, ScreenShake, ScreenFX, FloatingText
+from src.game.animation.FloatingText import WARNING_COLOR
+from src.helper.image import get_image
 from src.helper.sound import play_sound
-from src.util.type import Pos, Size
+from src.util.type import Pos
+from src.setting import SCREEN_WIDTH
 from src.util.inertial import accelerate, decelerate
 from .Interceptor import EnemyInterceptor
 from . import CarrierLaser
 from .CarrierLaser import LaserCarrier
+from .WarpIn import WarpIn
 from src.game.groups import G_Player1
 
 
 def _sheet(name):
-    return get_scaled_image(f"Enemy/Carrier/{name}.png", EnemyCarrier.SCALE)
+    return get_image(f"Enemy/Carrier/{name}.png")
 
 
 class EnemyCarrier(EnemyBoss):
-    # Drawn at 2x (an integer scale keeps the pixel art sharp)
-    SCALE = 2
+    NAME = "CARRIER"
 
     # The top half of the ship stays above the screen
     STOP_TOP = -150
+
+    ARMORED = True
 
     MAX_INTERCEPTOR_NUMBER = 9
 
@@ -46,6 +49,10 @@ class EnemyCarrier(EnemyBoss):
     VOLLEY_SPEED = 9
     LASER_SWEEP_SPEED = 1.2
 
+    # Below half health: red flash and shake, its health bar turns orange
+    ENRAGE_FLASH = (255, 70, 40)
+    SHAKE_ENRAGE = 0.6
+
     def __init__(self):
         EnemyBoss.__init__(
             self,
@@ -66,13 +73,28 @@ class EnemyCarrier(EnemyBoss):
         self._volley_left = 0
         self._count_volley = 0
         self.laser = None
+        self._enrage_shown = False
 
     @classmethod
-    def prepare_images(cls):
-        """ Scale the boss images now (while loading) instead of when it arrives """
-        for name in ("CarrierBase", "CarrierNormal", "CarrierDestroy", "CarrierHit", "CarrierAttack"):
-            _sheet(name)
+    def prepare(cls):
+        """ Make the laser images ahead of time (see CarrierLaser) """
         CarrierLaser.prepare()
+
+    @classmethod
+    def warp_frame(cls):
+        """ The frame whose shape shows while it warps in (see WarpIn) """
+        return WarpIn.first_frame(_sheet("CarrierNormal"))
+
+    @classmethod
+    def warp_center(cls):
+        """ Where it stands once in place """
+        return SCREEN_WIDTH // 2, cls.STOP_TOP + _sheet("CarrierNormal").get_height() // 2
+
+    def warp_to(self, pos) -> None:
+        """ Be at `pos` at once, already in place (warped in by the Stargate) """
+        self.set_pos(Pos(list(pos)))
+        self._speed.update(0, 0)
+        self.enter_action_stay_phase()
 
     @property
     def enraged(self) -> bool:
@@ -89,6 +111,9 @@ class EnemyCarrier(EnemyBoss):
     # --------------- Override Methods --------------- #
     def action(self):
         super().action()
+        if self.enraged and not self._enrage_shown:
+            self._enrage_shown = True
+            self._show_enrage()
         # Bullet patterns that last a few frames
         if self._volley_left > 0:
             if self._count_volley > 0:
@@ -178,6 +203,13 @@ class EnemyCarrier(EnemyBoss):
         direction = Vector2(G_Player1.sprite.rect.center) - origin
         return direction.normalize() if direction.length() > 0 else Vector2(0, 1)
 
+    def _show_enrage(self):
+        """ Tell the player the attacks come faster now """
+        ScreenFX.flash(self.ENRAGE_FLASH, strength=0.35, duration=30)
+        ScreenShake.add(self.SHAKE_ENRAGE)
+        play_sound("CARRIER_ARRIVE")
+        FloatingText(self.emitter, "ENRAGED", WARNING_COLOR, duration=90)
+
     def _attack_interceptors(self):
         def launch():
             if len(EnemyInterceptor.GROUP.sprites()) < self.MAX_INTERCEPTOR_NUMBER:
@@ -239,6 +271,7 @@ class BulletCarrierOrb(EnemyBullet):
     """ Energy orb of the fan and ring attacks """
 
     DAMAGE = 25
+    HIT_SPREAD = 4
 
     def __init__(self, pos: Vector2, velocity: Vector2, color: str):
         super().__init__(
@@ -248,39 +281,20 @@ class BulletCarrierOrb(EnemyBullet):
             image=get_image(f"Enemy/Carrier/Orb{color}.png")
         )
 
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(4),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()
-
 
 class BulletCarrierBolt(EnemyBullet):
     """ Fast aimed bolt of the volley attack """
 
     DAMAGE = 30
+    HIT_SPREAD = 4
 
     def __init__(self, pos: Vector2, velocity: Vector2):
-        # The art points down: turn it to the direction it flies
-        angle = -Vector2(0, 1).angle_to(velocity)
+        # The art points down: turn it (and the speed) to the direction it flies
         super().__init__(
             Pos([pos.x, pos.y]),
-            speed=velocity,
+            speed=Vector2(0, velocity.length()),
             damage=self.DAMAGE,
-            image=pygame.transform.rotate(get_image("Enemy/Laser2.png"), angle)
+            image=get_image("Enemy/Laser2.png"),
+            angle=-Vector2(0, 1).angle_to(velocity)
         )
-
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(4),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()
 

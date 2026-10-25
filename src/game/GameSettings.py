@@ -19,9 +19,13 @@ class GameSettings:
     music_volume = DEFAULT_VOLUME
     sound_volume = DEFAULT_VOLUME
     screen_shake = SCREEN_SHAKE
+    # Full screen flashes (nuke, boss blast); can be turned off for players sensitive to them
+    screen_flash = True
     show_fps = False
+    # Best score of a normal round (test mode rounds do not count)
+    best_score = 0
 
-    _SAVED = ["music_volume", "sound_volume", "screen_shake", "show_fps"]
+    _SAVED = ["music_volume", "sound_volume", "screen_shake", "screen_flash", "show_fps", "best_score"]
 
     @classmethod
     def music_scale(cls) -> float:
@@ -57,6 +61,7 @@ class GameSettings:
             logging.warning(f"<WARNING> Settings not loaded: {e}")
         cls.music_volume = max(0, min(cls.VOLUME_LEVELS, cls.music_volume))
         cls.sound_volume = max(0, min(cls.VOLUME_LEVELS, cls.sound_volume))
+        cls.best_score = max(0, cls.best_score)
 
     @classmethod
     def save(cls) -> None:

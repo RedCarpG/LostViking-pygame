@@ -3,31 +3,41 @@ from .player_event_handler import detect_custom_event, reset_player_events
 from .PlayerWeapon import PlayerWeapon
 from .PlayerPlane import PlayerPlane
 from .PlayerBomb import PlayerNucBomb
-from .PlayerViking import PlayerViking, PlayerWeaponViking, PlayerBulletViking
+from .PlayerViking import PlayerViking, PlayerWeaponViking, PlayerTorpedoViking, PlayerBulletViking
+from . import LanzerTorpedo
+
+# Asset manifest of the player
+IMAGES = [
+    "PlayerPlane/bullet.png",
+    "PlayerPlane/Bomb.png",
+    # Preloaded: decoding this big sheet during the explosion froze the game
+    "Bomb/NucExplosion.png",
+    "PlayerPlane/BulletHit.png",
+    "PlayerPlane/VikingBase.png",
+    "PlayerPlane/VikingMoveNormal.png",
+    "PlayerPlane/VikingMoveUp.png",
+    "PlayerPlane/VikingDestroy.png",
+    "PlayerPlane/VikingHit.png",
+    "PlayerPlane/VikingInvincible.png",
+]
 
 
 def load_asset_player():
-    from src.helper.image import load_image
-    load_image("PlayerPlane/bullet.png")
-    load_image("PlayerPlane/Bomb.png")
-    # Preloaded: decoding this big sheet during the explosion froze the game
-    load_image("Bomb/NucExplosion.png")
-    load_image("PlayerPlane/BulletHit.png")
-
-    load_image("PlayerPlane/VikingBase.png")
-    load_image("PlayerPlane/VikingMoveNormal.png")
-    load_image("PlayerPlane/VikingMoveUp.png")
-    load_image("PlayerPlane/VikingMoveNormal.png")
-    load_image("PlayerPlane/VikingDestroy.png")
-    load_image("PlayerPlane/VikingHit.png")
-    load_image("PlayerPlane/VikingInvincible.png")
-    # Init sound
-    from src.helper.sound import load_sound
+    from src.helper.image import load_images
+    from src.helper.sound import load_sounds
     from src.setting import MAIN_VOLUME
-    # Player
-    load_sound("Player/Shoot.ogg", MAIN_VOLUME - 0.3, "PLAYER_SHOOT")
-    load_sound("Player/Explode.ogg", MAIN_VOLUME - 0.3, "PLAYER_DESTROY")
-    # Nuc bomb
-    load_sound("Bomb/Bomb.ogg", MAIN_VOLUME - 0.2, "BOMB_LAUNCH")
-    load_sound("Bomb/BombExplode.ogg", MAIN_VOLUME, "BOMB_EXPLODE")
-    load_sound("Error.ogg", MAIN_VOLUME - 0.2, "BOMB_ERROR")
+    load_images(IMAGES)
+    # (file, volume, label)
+    load_sounds([
+        ("Player/Shoot.ogg", MAIN_VOLUME - 0.3, "PLAYER_SHOOT"),
+        ("Player/Explode.ogg", MAIN_VOLUME - 0.3, "PLAYER_DESTROY"),
+        # Nuc bomb
+        ("Bomb/Bomb.ogg", MAIN_VOLUME - 0.2, "BOMB_LAUNCH"),
+        ("Bomb/BombExplode.ogg", MAIN_VOLUME, "BOMB_EXPLODE"),
+        ("Error.ogg", MAIN_VOLUME - 0.2, "BOMB_ERROR"),
+        # Lanzer Torpedoes, and the Viking transforming to each weapon
+        ("Player/Torpedo.ogg", MAIN_VOLUME - 0.3, "TORPEDO_LAUNCH"),
+        ("Player/TransformFighter.ogg", MAIN_VOLUME - 0.25, "TRANSFORM_FIGHTER"),
+        ("Player/TransformAssault.ogg", MAIN_VOLUME - 0.25, "TRANSFORM_ASSAULT"),
+    ])
+    LanzerTorpedo.prepare()

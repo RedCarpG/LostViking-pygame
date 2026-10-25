@@ -19,6 +19,8 @@ class HealthBar:
         self._drop_health = max_value
         self._drop_health_rect = rect.copy()
         self._health_diff = 0
+        # Color of the remaining health
+        self.fill_color = COLOR.GREEN
 
         self.health_text = FontEntity(surface, get_font("HealthBar"),
                                       (f"{max_value}/{max_value}"), color=COLOR.WHITE)
@@ -50,5 +52,5 @@ class HealthBar:
                          self.max_rect)
         pygame.draw.rect(self.surface, COLOR.BROWN,
                          self._drop_health_rect)
-        pygame.draw.rect(self.surface, COLOR.GREEN, self._current_health_rect)
+        pygame.draw.rect(self.surface, self.fill_color, self._current_health_rect)
         self.health_text.blit()

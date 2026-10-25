@@ -7,9 +7,11 @@ import pygame
 from pygame import Vector2
 from pygame.sprite import spritecollideany
 
-from src.game.animation import AnimeSprite
+from src.game.animation import AnimeSprite, Effect, FloatingText
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.game.groups import G_Supplies, G_Players
+from src.helper.image import get_image
+from src.helper.sound import play_sound
 from src.util.type import Pos, Size
 from src.game.player import PlayerPlane
 
@@ -47,14 +49,32 @@ class Supply(AnimeSprite, abc.ABC):
     BOB_HEIGHT = 3
     BOB_PERIOD = 90
 
+    # Blinks during the last frames before it leaves, and while leaving
+    BLINK_BEFORE_LEAVE = 180
+    BLINK_PERIOD = 12
+
+    # Drawn to the player once this close (pixels), at up to MAGNET_SPEED pixels per frame
+    MAGNET_RADIUS = 110
+    MAGNET_SPEED = 7
+
     SCORE = 1000
 
-    def __init__(self, pos: Pos, frames, frame_size: Size):
-        super().__init__(frames, frame_size)
+    # Set by each kind of supply: its SUPPLY_TYPE, its image, the effect and the
+    # sound when it is picked up
+    TYPE = None
+    IMAGE = None
+    GET_EFFECT = None
+    GET_SOUND = None
+
+    def __init__(self, pos: Pos = None):
+        """ :param pos: where it appears, None: comes in from the top of the screen """
+        super().__init__(frames={
+            "BASE": get_image("Supply/SupplyBase.png"),
+            "IDLE": get_image(self.IMAGE)
+        }, frame_size=None)
 
         self.is_active = True
 
-        self.supply_type = None
         self.add(G_Supplies)
 
         self._pos = Vector2(0, 0)
@@ -73,22 +93,60 @@ class Supply(AnimeSprite, abc.ABC):
     def update(self):
         self.anime()
         if self.is_active:
-            if self.status == SupplyStatus.Enter:
-                self._action_enter()
-            elif self.status == SupplyStatus.Pop:
+            if self.status == SupplyStatus.Pop:
                 self._action_pop()
+            elif self._action_magnet():
+                pass
+            elif self.status == SupplyStatus.Enter:
+                self._action_enter()
             elif self.status == SupplyStatus.Move:
                 self._action_move()
             else:
                 self._action_leave()
             self._move()
+            self._blink()
             self.collide_player(G_Players)
         else:
             self.kill()
 
-    @abc.abstractmethod
+    # Image while hidden by the blinking, made once
+    _EMPTY = None
+    _hidden = False
+
+    def _blink(self):
+        """ Warn that it is about to leave: hidden every other half period """
+        leaving = self.status == SupplyStatus.Leave or (
+            self.status == SupplyStatus.Move and self._count_status_duration < self.BLINK_BEFORE_LEAVE)
+        hidden = leaving and int(self._time // (self.BLINK_PERIOD // 2)) % 2 == 1
+        if hidden != self._hidden:
+            self._hidden = hidden
+            self._render_frame()
+
+    def _render_frame(self) -> None:
+        super()._render_frame()
+        if self._hidden:
+            if Supply._EMPTY is None:
+                Supply._EMPTY = pygame.Surface((1, 1), pygame.SRCALPHA)
+            self.image = Supply._EMPTY
+
     def get_by_player(self, player: PlayerPlane):
+        text, color = self.apply(player)
+        play_sound(self.GET_SOUND)
+        Effect(
+            pos=Pos(self.rect.center),
+            frames={
+                "IDLE": get_image(self.GET_EFFECT)
+            },
+            frame_size=Size([50, 50])
+        )
+        self.show_label(text, color)
         self.kill()
+
+    @abc.abstractmethod
+    def apply(self, player: PlayerPlane) -> tuple:
+        """ Give the supply to the player
+        :return: (text, color) of the label telling what it gave
+        """
 
     # --------------- Phases --------------- #
     def enter_action_enter_phase(self):
@@ -165,6 +223,21 @@ class Supply(AnimeSprite, abc.ABC):
         if self.rect.top > SCREEN_HEIGHT:
             self.kill()
 
+    def _action_magnet(self) -> bool:
+        """ Fly to the player when it is close, :return: True if it does """
+        from src.game.groups import G_Player1
+        player = G_Player1.sprite
+        if player is None or not player.is_active:
+            return False
+        to_player = Vector2(player.rect.center) - self._pos
+        distance = to_player.length()
+        if distance > self.MAGNET_RADIUS or distance == 0:
+            return False
+        # Faster as it gets closer
+        speed = self.MAGNET_SPEED * (1.2 - distance / self.MAGNET_RADIUS)
+        self._velocity = to_player.normalize() * min(distance, max(self.MAX_SPEED, speed))
+        return True
+
     def _move(self):
         self._pos += self._velocity
         # Keep it on screen (a drop near an edge must not get lost)
@@ -183,3 +256,7 @@ class Supply(AnimeSprite, abc.ABC):
         if player and player.is_active:
             player.add_score(self.SCORE)
             self.get_by_player(player)
+
+    def show_label(self, text, color) -> None:
+        """ Tell the player what the supply gave """
+        FloatingText((self.rect.centerx, self.rect.top - 6), text, color)

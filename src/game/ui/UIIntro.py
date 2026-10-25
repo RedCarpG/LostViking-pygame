@@ -1,9 +1,10 @@
 import math
 import pygame
 from pygame.locals import *
-from src.helper.font import load_font, get_font, del_font, render_text
+from src.helper.font import load_font, get_font, render_text
 from src.setting import SCREEN_HEIGHT, SCREEN_WIDTH, COLOR, IS_WEB
 from src.game.custom_events import EVENT_START, EVENT_START_TEST, EVENT_OPEN_SETTINGS
+from src.game.GameSettings import GameSettings
 from .Button import Menu
 from .UIPause import post_event
 
@@ -44,18 +45,31 @@ class UIIntro:
             items.append(("EXIT", post_event(pygame.QUIT)))
         self.menu = Menu(self.surface, items, SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.48)
 
-        self.hint_text = render_text(
-            get_font("IntroHint"),
-            "WASD  MOVE      SPACE  SHOOT      Q  BOMB      ESC  PAUSE",
-            self.HINT_COLOR, spacing=0)
-        self.hint_rect = self.hint_text.get_rect(
-            center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.76))
+        # Controls, two lines
+        self.hints = []
+        for i, line in enumerate(("WASD / ARROWS  MOVE     SPACE  SHOOT     E  SWITCH WEAPON",
+                                  "Q  BOMB     P  PAUSE")):
+            text = render_text(get_font("IntroHint"), line, self.HINT_COLOR, spacing=0)
+            self.hints.append((text, text.get_rect(center=(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 0.76 + i * 30))))
+
+        self.best_text = None
+        self._render_best()
+
+    def _render_best(self):
+        """ Best score under the title (none before the first round) """
+        best = GameSettings.best_score
+        self.best_text = render_text(get_font("IntroHint"), f"BEST  {best:,}", self.HINT_COLOR,
+                                     spacing=1) if best > 0 else None
 
     def blit(self):
         self.surface.blit(self.title, self.title_rect)
         self.surface.blit(self.line, self.line_rect)
+        if self.best_text is not None:
+            self.surface.blit(self.best_text, self.best_text.get_rect(
+                center=(SCREEN_WIDTH / 2, self.line_rect.bottom + 30)))
         self.menu.blit()
-        self.surface.blit(self.hint_text, self.hint_rect)
+        for text, rect in self.hints:
+            self.surface.blit(text, rect)
 
     def handle_event(self, event):
         if event.type == pygame.KEYUP and event.key == K_ESCAPE and not IS_WEB:
@@ -65,7 +79,4 @@ class UIIntro:
 
     def reset(self):
         self.menu.reset()
-
-    def __del__(self):
-        del_font("Title")
-        del_font("IntroHint")
+        self._render_best()

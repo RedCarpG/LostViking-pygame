@@ -4,16 +4,20 @@ import pygame
 from pygame import Vector2
 from pygame.sprite import Sprite
 from src.game.enemy import EnemyII, EnemyBullet, EnemyStatusBar
-from src.game.groups import G_Effects
+from src.game.enemy.EnemyII import EnemyIIActionPhase
+from src.game.groups import G_Effects, G_Beams, G_Player1
 from src.helper.image import get_image
 from src.setting import SCREEN_WIDTH
-from src.util.type import Pos, Size
-from pygame.transform import rotate
-from src.game.animation import AnimeSprite, AttachEffect, Effect, ScreenShake
+from src.util.type import Pos
+from src.game.animation import AnimeSprite, ScreenShake
 from src.helper.sound import play_sound
+from .GravitonBeam import GravitonBeam
 
 
 class EnemyPhoenix(EnemyII):
+    """ Shielded fighter: aims its laser at the plane and, now and then, holds it with a
+    graviton beam (see GravitonBeam) while other enemies shoot
+    """
 
     MAX_HEALTH = 600
     SCORE = 2000
@@ -29,6 +33,12 @@ class EnemyPhoenix(EnemyII):
     # Body and wing roots, the same at every angle
     HITBOX = (60, 60)
     EXPLOSION = "large"
+    DESTROY_SOUND = "PHOENIX_DESTROY"
+    HITSTOP_DESTROY = 3
+
+    # Frames of its stay before the first graviton beam, and between two beams
+    GRAVITON_FIRST = (60, 200)
+    GRAVITON_COOLDOWN = (480, 720)
 
     def __init__(self, pos, is_left):
         super().__init__(
@@ -50,50 +60,40 @@ class EnemyPhoenix(EnemyII):
         self._count_regen_delay = 0
         self.shield_bubble = PhoenixShieldBubble(self)
         self.status_bar = EnemyStatusBar(self, has_shield=True)
+        self.graviton = None
+        self._count_graviton = random.randint(*self.GRAVITON_FIRST)
         play_sound("PHOENIX_ARRIVE")
     # ---------- Override Methods
 
     def shoot(self, target):
+        # An attack started just before the beam does not fire while it channels
+        if self.graviton is not None:
+            return
         # --- Correct the release point of the bullet from attack animation
         correction = Vector2(0, 100)
         correction = correction.rotate(-self.angle)
         BulletPhoenix(Pos(correction + self.rect.center), self.angle)
         play_sound("PHOENIX_LASER")
 
-    # Rewrite hit to add Shield
-    def hit(self, damage=100, **kwargs):
-        if self.is_active:
-            self._count_regen_delay = self.SHIELD_REGEN_DELAY
-            self.status_bar.show()
-            if self.shield > 0:
-                self.shield -= damage
-                play_sound("SHIELD")
-                if self.shield <= 0:
-                    self.shield = 0
-                    self._break_shield()
-                else:
-                    hit_pos = kwargs.get("hit_pos")
-                    self.shield_bubble.pulse(hit_pos)
-                    ShieldImpactEffect(self, hit_pos)
-            else:
-                self._health -= damage
-                if self._health > 0:
-                    # Get Hit effect
-                    AttachEffect(
-                        self,
-                        frames={
-                            "IDLE": self.frames["HIT"]
-                        },
-                        frame_size=self.frame_size,
-                        angle=self.angle
-                    )
-                    self.hit_feedback()
-                else:
-                    # HP below 0
-                    self.destroy()
-            return True
-        else:
+    # The shield takes the hits while it lasts
+    def hit(self, damage=100, **kwargs) -> bool:
+        if not self.is_active:
             return False
+        self._count_regen_delay = self.SHIELD_REGEN_DELAY
+        self.status_bar.show()
+        if self.shield > 0:
+            self.shield -= damage
+            play_sound("SHIELD")
+            if self.shield <= 0:
+                self.shield = 0
+                self._break_shield()
+            else:
+                hit_pos = kwargs.get("hit_pos")
+                self.shield_bubble.pulse(hit_pos)
+                ShieldImpactEffect(self, hit_pos)
+        else:
+            self._damage_hull(damage)
+        return True
 
     def _break_shield(self):
         ShieldBreakEffect(self.rect.center)
@@ -110,10 +110,35 @@ class EnemyPhoenix(EnemyII):
                 play_sound("SHIELD")
                 self.shield_bubble.pulse()
             self.shield = min(self.MAX_SHIELD, self.shield + self.SHIELD_REGEN)
+        self._update_graviton()
 
-    def destroy(self, drop_supply=True) -> None:
-        play_sound("PHOENIX_DESTROY")
-        return super().destroy(drop_supply)
+    # --------------- Graviton beam --------------- #
+    def _update_graviton(self):
+        if self.graviton is not None:
+            if self.graviton.alive():
+                return
+            self.graviton = None
+            self._count_graviton = random.randint(*self.GRAVITON_COOLDOWN)
+        if self.state != EnemyIIActionPhase.Stay:
+            return
+        if self._count_graviton > 0:
+            self._count_graviton -= 1
+            return
+        player = G_Player1.sprite
+        # One beam at a time, and only at a plane that can be caught
+        if len(G_Beams) == 0 and self.shield > 0 and player is not None \
+                and player.is_active and not player.is_invincible:
+            self.graviton = GravitonBeam(self)
+
+    def aim(self, point: Pos):
+        # Holds still while the beam is locked or firing
+        if self.graviton is None or not self.graviton.locks_aim:
+            super().aim(point)
+
+    def attack(self, target):
+        # No laser while it channels the beam
+        if self.graviton is None:
+            super().attack(target)
 
     @classmethod
     def add_enemy_phoenix(cls, side=None) -> bool:
@@ -141,25 +166,9 @@ class BulletPhoenix(EnemyBullet):
             pos,
             speed=Vector2([0, self.SPEED]),
             damage=self.DAMAGE,
-            image=get_image("Enemy/laser.png")
+            image=get_image("Enemy/laser.png"),
+            angle=angle
         )
-        self._rotate(angle)
-
-    def _rotate(self, angle: int) -> None:
-        temp = self.rect.center
-        self.image = rotate(self.image, angle)
-        self.rect = self.image.get_rect(center=temp)
-        self.speed = self.speed.rotate(-angle)
-
-    def hit(self, target=None):
-        Effect(
-            Pos(self.rect.center).random_offset(5),
-            frames={
-                "IDLE": get_image("Enemy/LaserHit.png"),
-            },
-            frame_size=Size([19, 19])
-        )
-        return super().hit()
 
 
 class PhoenixShieldBubble(AnimeSprite):

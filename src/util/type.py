@@ -1,12 +1,8 @@
 
 import random
-from typing import Sequence
 
 
 class Size:
-    def __init__(self, width, height) -> None:
-        self._width = width
-        self._height = height
 
     def __init__(self, size: list[int, int]) -> None:
         self._width = size[0]
@@ -49,9 +45,6 @@ class Pos(object):
 
     def move_y(self, y):
         return Pos([self._x, self._y + y])
-
-    def move(self, x, y):
-        return Pos([self._x + x, self._y + y])
 
     def move(self, pos: list[int, int]):
         return Pos([self._x + pos[0], self._y + pos[1]])

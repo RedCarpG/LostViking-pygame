@@ -5,16 +5,33 @@ Some methods to modify a Surface:
     pygame.transform.smoothscale(Surface) -> Surface
 """
 import os
-import sys
+import logging
 import pygame
 from pygame.display import get_init
 from dataclasses import dataclass
-import logging
-import sys
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+
+log = logging.getLogger(__name__)
 
 _image_dir = os.path.join(os.path.split(os.path.abspath(__file__))[
                           0], '../../asset/image')
+
+# Images drawn at art size and shown at ART_SCALE, like the background: one art pixel is a 2x2 block
+# of screen pixels. They are scaled when they are loaded; the art-size image is kept for the pixel-art
+# rotations (art_source). The other ships, the bullets and the nuke are drawn at screen size
+ART_SCALE = 2
+_ART_PREFIXES = ("Supply/", "Structure/", "Enemy/Asteroid/", "Enemy/Oracle/", "Enemy/Carrier/Carrier")
+# Scaled image -> (art-size image, scale)
+_ART = {}
+
+
+def art_scale(filename: str) -> int:
+    """ Screen pixels per art pixel of an image file """
+    return ART_SCALE if filename.replace("\\", "/").startswith(_ART_PREFIXES) else 1
+
+
+def art_source(image: pygame.Surface):
+    """ (art-size image, scale) of an image scaled when loaded, None for the others """
+    return _ART.get(image)
 
 
 class _ImageBuffer(object):
@@ -66,9 +83,9 @@ def load_image(filename: str, **kwargs: ImageType) -> pygame.surface.Surface:
 
     try:
         image = pygame.image.load(fullname)
-        logging.info("<SUCCESS> Image [{}] loaded !".format(filename))
+        log.debug("Image [%s] loaded", filename)
     except pygame.error:
-        logging.error("<ERROR> Image [{}] not found".format(filename))
+        log.error("Image [%s] not found", filename)
         raise SystemExit(str(pygame.get_error()))
 
     # Convert the Surface for better performance(convert_alpha() if with transparent pixels)
@@ -89,8 +106,21 @@ def load_image(filename: str, **kwargs: ImageType) -> pygame.surface.Surface:
                                        [int(image.get_width() * _scale[0]),
                                         int(image.get_height() * _scale[1])])
 
+    scale = art_scale(filename)
+    if scale > 1:
+        art = image
+        image = pygame.transform.scale(art, (art.get_width() * scale, art.get_height() * scale))
+        _ART[image] = (art, scale)
+
     _IMAGE[filename] = image
     return image
+
+
+def load_images(filenames) -> None:
+    """ Load every image of a list (an asset manifest) that is not loaded yet, see load_image """
+    for filename in filenames:
+        if filename not in _IMAGE.BUFFER:
+            load_image(filename)
 
 
 def get_image(label: str, **kwargs: ImageType) -> pygame.surface.Surface:
@@ -131,18 +161,26 @@ def del_image(label: str):
     _IMAGE.pop(label, None)
 
 
-_SCALED = {}
+_ROTATED = {}
 
 
-def get_scaled_image(label: str, factor: int, height: int = None) -> pygame.surface.Surface:
-    """ get_image scaled by an integer `factor` with sharp pixels (pixel art), cached.
-    :param height: keep only the top `height` rows of the image before scaling
+def get_rotated_image(image: pygame.Surface, angle: float) -> pygame.surface.Surface:
+    """ `image` turned by `angle` degrees (counterclockwise), cached by whole degree.
+    Bullets are turned on every shot: the same few angles come back all the time.
+    A sprite is turned at art size, then scaled: its pixels stay on the art grid
     """
-    key = (label, factor, height)
-    if key not in _SCALED:
-        image = _IMAGE[label]
-        if height is not None and height < image.get_height():
-            image = image.subsurface((0, 0, image.get_width(), height))
-        _SCALED[key] = pygame.transform.scale(
-            image, (image.get_width() * factor, image.get_height() * factor))
-    return _SCALED[key]
+    angle = round(angle) % 360
+    if angle == 0:
+        return image
+    key = (image, angle)
+    rotated = _ROTATED.get(key)
+    if rotated is None:
+        source = art_source(image)
+        if source is None:
+            rotated = pygame.transform.rotate(image, angle)
+        else:
+            art, scale = source
+            turned = pygame.transform.rotate(art, angle)
+            rotated = pygame.transform.scale(turned, (turned.get_width() * scale, turned.get_height() * scale))
+        _ROTATED[key] = rotated
+    return rotated

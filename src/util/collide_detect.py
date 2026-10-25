@@ -14,8 +14,18 @@ def hit_rect(sprite, ratio=1.0) -> Rect:
     return scaled
 
 
+_collide_funcs = {}
+
+
 def collide_detect(ratio=0.8):
     """ Collision function for pygame.sprite.spritecollide*, see `hit_rect` """
-    def collide_func(a, b):
-        return hit_rect(a, ratio).colliderect(hit_rect(b, ratio))
-    return collide_func
+    func = _collide_funcs.get(ratio)
+    if func is None:
+        def func(a, b):
+            # Quick test first: every hit area lies inside its sprite rect,
+            # and most pairs are far apart
+            if not a.rect.colliderect(b.rect):
+                return False
+            return hit_rect(a, ratio).colliderect(hit_rect(b, ratio))
+        _collide_funcs[ratio] = func
+    return func

@@ -1,19 +1,11 @@
 import os
-import sys
-import pygame
 import logging
-import sys
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+import pygame
+
+log = logging.getLogger(__name__)
 
 _font_dir = os.path.join(os.path.split(
     os.path.abspath(__file__))[0], '../../asset/font')
-
-
-class NoneFont:
-    @classmethod
-    def render(cls):
-        logging.warning("-- No font")
-        return pygame.Surface((0, 0))
 
 
 class _FontBuffer(object):
@@ -22,9 +14,7 @@ class _FontBuffer(object):
 
     def __getitem__(self, key):
         if key not in self.BUFFER:
-            logging.warning(
-                f"<WARNING> Font [{key}] not loaded")
-            return NoneFont()
+            raise KeyError(f"Font [{key}] not loaded")
         return self.BUFFER[key]
 
     def __setitem__(self, key, item):
@@ -43,16 +33,14 @@ def load_font(filename, size, label):
     :param size
     :return pygame.font.Font object
     """
-
-    if not pygame.font or not pygame.font.get_init():
-        logging.warning("<WARNING> pygame.font not inited")
-        return NoneFont()
+    if label in _FONT.BUFFER:
+        return _FONT[label]
     fullname = os.path.join(_font_dir, filename)
     try:
         font = pygame.font.Font(fullname, size)
-        logging.info(f"<SUCCESS> Font [{filename}] loaded !")
-    except pygame.error:
-        logging.error(f"<ERROR> Font [{filename}] not found")
+        log.debug("Font [%s] loaded", filename)
+    except (pygame.error, FileNotFoundError):
+        log.error("Font [%s] not found", filename)
         raise SystemExit(str(pygame.get_error()))
     _FONT[label] = font
     return font

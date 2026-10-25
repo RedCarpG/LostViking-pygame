@@ -1,20 +1,14 @@
-
-from abc import ABC, abstractmethod
-import logging
-import sys
+from abc import abstractmethod
 import random
 import pygame
 from pygame import Vector2
-from src.game.animation import AttachEffect
 
-from src.game.animation import AnimeSprite, ScreenShake, Explosion
+from src.game.animation import AnimeSprite, AttachEffect, ScreenShake, HitStop, Explosion
 from src.game.groups import G_Enemys
 from src.util.type import Pos, Size
 from src.helper.sound import play_sound
 from src.setting import SCREEN_HEIGHT
 from .BasicEnemy import BasicEnemy
-
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 class EnemyI(AnimeSprite, BasicEnemy):
@@ -34,16 +28,27 @@ class EnemyI(AnimeSprite, BasicEnemy):
     # Damage dealt to the player when they collide, None destroys the player
     COLLIDE_DAMAGE = None
 
+    # Armored ships take extra damage from the Lanzer Torpedoes (as in StarCraft II)
+    ARMORED = False
+
+    # Ground structures (cannons, pylons, the Stargate): the plane flies over them
+    GROUND = False
+
     # Fixed (width, height) collision box, for sprites that rotate: the rect of a
     # rotated image grows with the angle. None uses the rect (see collide_detect)
     HITBOX = None
 
-    # Hit feedback: frames of white flash and pixels pushed back per hit
+    # Hit feedback: frames of white flash (light added to the image) and pixels pushed back per hit
     FLASH_DURATION = 3
+    FLASH_COLOR = (190, 190, 190)
     KNOCKBACK = 2
 
     # Explosion when destroyed (see Explosion.SIZES)
     EXPLOSION = "medium"
+    # Sound played when destroyed, None: no sound
+    DESTROY_SOUND = None
+    # Frames the world freezes when destroyed, for the big ships (see HitStop)
+    HITSTOP_DESTROY = 0
     # Frames of the destroy animation shown under the explosion (the last ones are
     # dark silhouettes)
     DESTROY_FRAMES_SHOWN = 3
@@ -68,6 +73,7 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self._count_flash = 0
         self._normal_image = None
         self._flash_image = None
+        self._hit_effect = None
 
     # --------------- Super Methods Override --------------- #
 
@@ -100,15 +106,26 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self._pos += self._speed
         self.rect.center = (round(self._pos.x), round(self._pos.y))
 
-    def hit(self, damage=100, target=None, **kwargs) -> None:
+    def hit(self, damage=100, target=None, **kwargs) -> bool:
         """ This function is called in collision detection
         :param kwargs: hit_pos, where the bullet hit (used by shields)
+        :return: False if this enemy can not be hit any more (already destroyed)
         """
-        if self.is_active:
-            self._health -= damage
-            if self._health > 0:
-                # Get Hit effect
-                AttachEffect(
+        if not self.is_active:
+            return False
+        self._damage_hull(damage)
+        return True
+
+    def _damage_hull(self, damage) -> None:
+        """ Take damage on the health, destroyed when it reaches 0 """
+        self._health -= damage
+        if self._health > 0:
+            # Get Hit effect (restarted by the next hits: stacking copies of a big ship
+            # sheet cost a lot of drawing and looked no different)
+            if self._hit_effect is not None and self._hit_effect.alive():
+                self._hit_effect.set_anime_state("IDLE")
+            else:
+                self._hit_effect = AttachEffect(
                     self,
                     frames={
                         "IDLE": self.frames["HIT"]
@@ -116,13 +133,10 @@ class EnemyI(AnimeSprite, BasicEnemy):
                     frame_size=self.frame_size,
                     angle=self.angle
                 )
-                self.hit_feedback()
-            else:
-                # HP below 0
-                self.destroy()
-            return True
+            self.hit_feedback()
         else:
-            return False
+            # HP below 0
+            self.destroy()
 
     def hit_feedback(self) -> None:
         """ Make a hit feel solid: white flash, small push back and a hit sound """
@@ -136,7 +150,7 @@ class EnemyI(AnimeSprite, BasicEnemy):
                 # New animation frame (or first flash frame): make a white copy of it
                 self._normal_image = self.image
                 self._flash_image = self.image.copy()
-                self._flash_image.fill((190, 190, 190), special_flags=pygame.BLEND_RGB_ADD)
+                self._flash_image.fill(self.FLASH_COLOR, special_flags=pygame.BLEND_RGB_ADD)
                 self.image = self._flash_image
             self._count_flash -= 1
         elif self._flash_image is not None:
@@ -157,8 +171,12 @@ class EnemyI(AnimeSprite, BasicEnemy):
         self.is_active = False
         self._speed *= 0.5
         self.set_anime_state("DESTROY")
+        if self.DESTROY_SOUND is not None:
+            play_sound(self.DESTROY_SOUND)
         Explosion(self.rect.center, self.EXPLOSION)
         ScreenShake.add(self.SHAKE_DESTROY)
+        if self.HITSTOP_DESTROY:
+            HitStop.add(self.HITSTOP_DESTROY)
         from src.game.supply import drop_supply_event
         if drop_supply and random.random() < self.drop_supply_chance:
             drop_supply_event(Pos(self.pos))

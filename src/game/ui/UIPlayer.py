@@ -1,11 +1,11 @@
-
 import pygame
 from src.game.groups import G_Player1
-from src.game.animation.Effect import AttachEffect, UIEffect
+from src.game.animation.Effect import UIEffect
 from src.game.animation.AnimeSprite import AnimeSprite
-from src.helper.image.image_loader import get_image
-from src.setting import COLOR, SCREEN_HEIGHT
+from src.helper.image import get_image
+from src.setting import SCREEN_HEIGHT
 from src.util.type import Size
+from src.game.player import PlayerPlane
 from .UIState import UIState
 from .HealthBar import HealthBar
 
@@ -90,7 +90,7 @@ class UIPlayer:
                     "UI/Player/Viking70.png")
 
     def blit(self):
-        for i in range(5):
+        for i in range(PlayerPlane.LIFE_MAX):
             if i < self.player_g.sprite.life:
                 self.ui_player.blit(
                     self.lifelight_img.image, self.lifelight_img.rect.move(i * self.LIFE_SPACING, 0))

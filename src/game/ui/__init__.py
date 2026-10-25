@@ -10,3 +10,4 @@ from .UIIntro import UIIntro
 from .UIResult import UIResult
 from .UISettings import UISettings
 from .TestPanel import TestPanel
+from .UIRoute import UIRoute

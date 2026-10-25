@@ -1,9 +1,9 @@
 import pygame.event
-from pygame.locals import *
-from src.game.groups import G_Enemys
 
-from src.helper.sound.sound_loader import play_sound
-from src.game.custom_events import *
+from src.helper.sound import play_sound
+from src.game.animation import FloatingText
+from src.game.animation.FloatingText import WARNING_COLOR
+from src.game.custom_events import EVENT_PLAYER_SHOOT, EVENT_PLAYER_BOMB, EVENT_BOMB_EXPLODE
 from .PlayerPlane import PlayerPlane
 from .PlayerBomb import PlayerNucBomb
 
@@ -13,12 +13,16 @@ def _handle_player_shoot_event(player: PlayerPlane):
 
 
 def _handle_player_bomb_launch_event(player: PlayerPlane):
-    if player.bomb_count > 0:
+    if player.in_stasis:
+        play_sound("BOMB_ERROR")
+    elif player.bomb_count > 0:
         player.dec_bomb()
         PlayerNucBomb.launch(player.pos, player)
         pygame.event.set_blocked(EVENT_PLAYER_BOMB)
     else:
         play_sound("BOMB_ERROR")
+        if player.is_active:
+            FloatingText((player.rect.centerx, player.rect.top - 10), "NO BOMBS", WARNING_COLOR)
 
 
 def _handle_player_bomb_explode_event(player: PlayerPlane):
@@ -27,7 +31,7 @@ def _handle_player_bomb_explode_event(player: PlayerPlane):
         if each.is_active:
             each.hit(1000)
             if not each.is_active:
-                player.add_score(each.score)
+                player.credit_kill(each)
 
     for each in G_Enemy_Bullets:
         each.hit()
@@ -53,7 +57,6 @@ def detect_custom_event(e: pygame.event.Event):
     elif e.type == EVENT_BOMB_EXPLODE:
         if hasattr(e, "player"):
             _handle_player_bomb_explode_event(e.player)
-            print("Bomb explode")
     else:
         return False
     return True

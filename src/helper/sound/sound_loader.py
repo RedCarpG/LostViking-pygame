@@ -1,21 +1,21 @@
 import os
-import sys
-
-import pygame
 import logging
-import sys
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+import pygame
+
+log = logging.getLogger(__name__)
 
 _sound_dir = os.path.join(os.path.split(
     os.path.abspath(__file__))[0], '../../asset/sound')
 
 
 class NoneSound:
+    """ Stands for a sound that could not be loaded: playing it does nothing """
+
     def __init__(self, sound_label):
         self.label = sound_label
 
     def play(self):
-        logging.warning("-- No sound played for {}".format(self.label))
+        pass
 
     def stop(self):
         pass
@@ -27,9 +27,9 @@ class _SoundBuffer(object):
 
     def __getitem__(self, key):
         if key not in self.BUFFER:
-            logging.warning(
-                f"<WARNING> Sound [{key}] not loaded")
-            return NoneSound(key)
+            # Warn once, then keep the silent stand-in
+            log.warning("Sound [%s] not loaded", key)
+            self.BUFFER[key] = NoneSound(key)
         return self.BUFFER[key]
 
     def __setitem__(self, key, item):
@@ -55,8 +55,9 @@ def play_sound(label):
     """ Play sound from _SOUND dictionary which is previously loaded
     :param label: Name tag of the sound effect
     """
-    _SOUND[label].stop()
-    _SOUND[label].play()
+    sound = _SOUND[label]
+    sound.stop()
+    sound.play()
 
 
 def del_sound(label):
@@ -73,9 +74,7 @@ def load_sound(filename, volume, label):
     :param label: Label tag in the dictionary
     """
     if not pygame.mixer or not pygame.mixer.get_init():
-
-        logging.warning(
-            "<WARNING> Mixer hasn't initialized, failed loading sound ！")
+        log.warning("Mixer not initialized, sound [%s] not loaded", filename)
         _SOUND[label] = NoneSound(label)
         return
 
@@ -83,10 +82,9 @@ def load_sound(filename, volume, label):
 
     try:
         sound = pygame.mixer.Sound(full_path)
-        logging.info(f"<SUCCESS> Sound [{filename}] loaded ！")
+        log.debug("Sound [%s] loaded", filename)
     except pygame.error:
-        logging.error(
-            f'<ERROR> !!! Can not find audio file : {full_path}')
+        log.error("Can not find audio file: %s", full_path)
         raise SystemExit(str(pygame.get_error()))
 
     _sound_base_volume[label] = volume
@@ -94,55 +92,39 @@ def load_sound(filename, volume, label):
     _SOUND[label] = sound
 
 
+def load_sounds(table) -> None:
+    """ Load every sound of a table (an asset manifest) of (filename, volume, label), see load_sound """
+    for filename, volume, label in table:
+        load_sound(filename, volume, label)
+
+
 def load_music(filename, volume):
     """ Load a sound file from filename to be played as music
     :param filename: Filename, in the sound_dir
     :param volume: Volume to be set for the music
     """
-
     if not pygame.mixer or not pygame.mixer.get_init():
-        class NoneMusic:
-            @classmethod
-            def play(cls):
-                logging.warning("-- No music played to play")
+        log.warning("Mixer not initialized, music [%s] not loaded", filename)
+        return
 
-        logging.warning(
-            "<WARNING> Mixer hasn't initialized, failed loading music！")
-        return NoneMusic()
-
-    if isinstance(filename, (list, tuple)):
-        try:
-            _MUSIC.load(os.path.join(_sound_dir, filename[0]))
-        except pygame.error:
-            logging.error('<ERROR> !!! Can not find audio file in: [{}]'.format(
-                filename[0]))
-            raise SystemExit(str(pygame.get_error()))
-
-        for each_filename in filename[1:]:
-            each_path = os.path.join(_sound_dir, each_filename)
-            try:
-                _MUSIC.queue(os.path.join(_sound_dir, each_path))
-            except pygame.error:
-                logging.error('<ERROR> !!! Can not find audio file in: [{}]'.format(
-                    each_path))
-                raise SystemExit(str(pygame.get_error()))
-            logging.info("<SUCCESS> Music [{}] loaded !".format(each_path))
-    else:
-        full_path = os.path.join(_sound_dir, filename)
-        try:
-            _MUSIC.load(full_path)
-            logging.info("<SUCCESS> Music [{}] loaded !".format(filename))
-        except pygame.error:
-            logging.error('<ERROR> !!! Can not find audio file in: [{}]'.format(
-                full_path))
-            raise SystemExit(str(pygame.get_error()))
+    full_path = os.path.join(_sound_dir, filename)
+    try:
+        # Stop first: loading while the music fades out waits for the end of the fade
+        # (the game froze for up to 1.5 s on a quick restart after the result screen)
+        _MUSIC.stop()
+        _MUSIC.load(full_path)
+        log.debug("Music [%s] loaded", filename)
+    except pygame.error:
+        log.error("Can not find audio file: %s", full_path)
+        raise SystemExit(str(pygame.get_error()))
     global _music_base_volume
     _music_base_volume = volume
     _MUSIC.set_volume(min(1.0, volume * _volume_scale["music"]))
 
 
-def play_music():
-    _MUSIC.play(loops=-1)
+def play_music(fade_ms=0):
+    if pygame.mixer.get_init():
+        _MUSIC.play(loops=-1, fade_ms=fade_ms)
 
 
 def set_sound_volume_scale(scale):

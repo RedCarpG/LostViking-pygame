@@ -2,7 +2,7 @@
 Player controllable object
 """
 import pygame
-from pygame.sprite import spritecollideany
+from pygame.sprite import spritecollide
 from abc import ABC, abstractmethod
 from src.util.type import Pos
 from src.util import if_in_screen, collide_detect
@@ -11,10 +11,18 @@ from src.game.player import PlayerPlane
 
 
 class PlayerWeapon(ABC):
-    LEVEL_MAX = 10
+    LEVEL_MAX = 5
+
+    # Shown when the player switches to it
+    NAME = ""
+    # Sound of a shot, and of the plane switching to this weapon
+    SHOOT_SOUND = "PLAYER_SHOOT"
+    SWITCH_SOUND = None
 
     BASIC_DMG = 80
     INC_DMG = 10
+    # Frames between two shots, by level (the last value for the higher levels)
+    FIRE_INTERVALS = (20,)
 
     def __init__(self, player: PlayerPlane):
         self.player = player
@@ -27,11 +35,17 @@ class PlayerWeapon(ABC):
     def level(self) -> int:
         return self._level
 
-    def level_up(self) -> None:
+    @property
+    def fire_interval(self) -> int:
+        return self.FIRE_INTERVALS[min(self._level, len(self.FIRE_INTERVALS)) - 1]
+
+    def level_up(self) -> bool:
+        """ :return: False if the weapon was already at its highest level """
         if self._level >= self.LEVEL_MAX:
-            return
+            return False
         self._level += 1
         self._damage += self._inc_dmg
+        return True
 
     def level_down(self) -> None:
         if self._level <= 1:
@@ -57,7 +71,12 @@ class PlayerWeapon(ABC):
 
 class PlayerBullet(pygame.sprite.Sprite, ABC):
     """ Basic Bullet Class
+    A piercing bullet (`pierce` > 0) goes through that many more enemies, losing some damage
+    each time; it never hits the same enemy twice, and a shield stops it
     """
+
+    # Damage kept after going through an enemy
+    PIERCE_FALLOFF = 0.7
 
     def __init__(self,
                  pos: Pos,
@@ -70,6 +89,8 @@ class PlayerBullet(pygame.sprite.Sprite, ABC):
         self.rect = self.image.get_rect(center=pos.to_list())
         self.speed = speed
         self.damage = 0
+        self.pierce = 0
+        self._pierced = set()
 
     def update(self):
         # General update method for bullets
@@ -83,18 +104,36 @@ class PlayerBullet(pygame.sprite.Sprite, ABC):
         # General get hit method for bullets
         self.kill()
 
+    def hit_shield(self):
+        """ Absorbed by a shield (the shield shows its own impact effect) """
+        self.kill()
+
+    def pass_through(self):
+        """ Went through an enemy (piercing) and flies on """
+        pass
+
+    def damage_to(self, enemy) -> int:
+        """ Damage dealt to `enemy` (some weapons hurt some ships more) """
+        return self.damage
+
     def _move(self):
         self.rect.move_ip(self.speed.x, self.speed.y)
 
     def collide_enemy(self, enemy_group):
-        enemy = spritecollideany(self, enemy_group, collide_detect(0.8))
-        if enemy and enemy.is_active:
-            # A shield absorbs the bullet and shows its own impact effect
+        for enemy in spritecollide(self, enemy_group, False, collide_detect(0.8)):
+            if not enemy.is_active or enemy in self._pierced:
+                continue
             shielded = getattr(enemy, "shield", 0) > 0
-            enemy.hit(self.damage, hit_pos=self.rect.center)
+            enemy.hit(self.damage_to(enemy), hit_pos=self.rect.center)
             if not enemy.is_active:
-                self.player.add_score(enemy.score)
+                self.player.credit_kill(enemy)
             if shielded:
-                self.kill()
-            else:
+                self.hit_shield()
+                return
+            if self.pierce <= 0:
                 self.hit()
+                return
+            self.pierce -= 1
+            self._pierced.add(enemy)
+            self.damage = int(self.damage * self.PIERCE_FALLOFF)
+            self.pass_through()

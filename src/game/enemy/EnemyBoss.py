@@ -1,18 +1,13 @@
-
 from enum import Enum
 import random
 import pygame
-from src.game.groups import G_BOSS
 from src.util.type import Pos, Size
 from src.setting import SCREEN_WIDTH, SCREEN_HEIGHT
 from src.util.inertial import decelerate, accelerate
 from src.game.groups import G_BOSS, G_Player1
-from src.game.animation import Explosion, Spark, ScreenShake
+from src.game.animation import Explosion, Spark, ScreenShake, HitStop, ScreenFX
 from src.helper.sound import play_sound
 from .EnemyI import EnemyI
-import logging
-import sys
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 
 
 class BossActionPhase(Enum):
@@ -22,6 +17,8 @@ class BossActionPhase(Enum):
 
 
 class EnemyBoss(EnemyI):
+    # Shown under its health bar, None: no name
+    NAME = None
     MAX_HEALTH = 30000
     SCORE = 15000
 
@@ -47,9 +44,15 @@ class EnemyBoss(EnemyI):
     DEATH_BLAST_INTERVAL = 8
     SHAKE_DEATH_BLAST = 0.3
 
+    # The last blast: frames the world freezes, white flash strength
+    HITSTOP_FINAL_BLAST = 10
+    FLASH_FINAL_BLAST = 0.6
+
     # Flying into the boss destroys the player, the boss only takes some damage
     COLLIDE_SELF_DAMAGE = 500
     KNOCKBACK = 0
+    # A boss is hit all the time: a soft flash, so its art still shows
+    FLASH_COLOR = (56, 56, 56)
 
     def __init__(self, frames, frame_size: Size, **kwargs):
         super().__init__(pos=Pos([0, 0]), frames=frames,
@@ -170,4 +173,6 @@ class EnemyBoss(EnemyI):
             Explosion((x + dx, y + dy), "large", delay=i * 4)
         Spark.burst((x, y), 30, 120)
         ScreenShake.add(self.SHAKE_DESTROY)
+        HitStop.add(self.HITSTOP_FINAL_BLAST)
+        ScreenFX.flash(strength=self.FLASH_FINAL_BLAST, duration=45)
         self.set_anime_state("DESTROY")

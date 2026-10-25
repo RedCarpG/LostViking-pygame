@@ -49,7 +49,8 @@ class TestPanel:
 
     def _build_rows(self):
         # Imported here: the level modules are only needed once the game is running
-        from src.game.level.level1 import EnemyScout, EnemyPhoenix, EnemyInterceptor
+        from src.game.level.level1 import EnemyScout, EnemyPhoenix, EnemyInterceptor, EnemyOracle, \
+            Asteroid, OutpostPlatform
         from src.game.supply import get_supply_type
         game = self.game
 
@@ -62,6 +63,11 @@ class TestPanel:
         def spawn_interceptor():
             x = random.randint(150, SCREEN_WIDTH - 150)
             EnemyInterceptor(Pos([x, -30]), [[x, 260]])
+
+        def spawn_stargate():
+            if G_BOSS.sprite is None:
+                game.level.clear_enemies()
+                game.level.go_to("stargate")
 
         def boss_damage():
             boss = G_BOSS.sprite
@@ -83,11 +89,15 @@ class TestPanel:
             TestMode.show_hitboxes = not TestMode.show_hitboxes
 
         header("SPAWN")
-        entry(K_1, "1", lambda: ("Scout", None), lambda: EnemyScout.add_enemy_scout(1))
+        entry(K_1, "1", lambda: ("Scout wave", None), lambda: EnemyScout.spawn_wave())
         entry(K_2, "2", lambda: ("Phoenix", None),
               lambda: EnemyPhoenix.add_enemy_phoenix(side=random.choice(["left", "right"])))
         entry(K_3, "3", lambda: ("Interceptor", None), spawn_interceptor)
-        entry(K_4, "4", lambda: ("Carrier (boss)", None), lambda: game.level.spawn_carrier())
+        entry(K_o, "O", lambda: ("Oracle", None), lambda: EnemyOracle.warp_in())
+        entry(K_r, "R", lambda: ("Asteroid", None), lambda: Asteroid.spawn())
+        entry(K_t, "T", lambda: ("Outpost", None), lambda: OutpostPlatform.spawn())
+        entry(K_4, "4", lambda: ("Stargate (boss)", None), spawn_stargate)
+        entry(K_c, "C", lambda: ("Carrier (boss)", None), lambda: game.level.spawn_carrier())
         header("PLAYER")
         entry(K_5, "5", lambda: ("Weapon level +1", f"Lv {game.player.level}"),
               lambda: game.player.level_up())
@@ -101,6 +111,7 @@ class TestPanel:
               lambda: get_supply_type()(Pos([random.randint(200, SCREEN_WIDTH - 200), 300])))
         entry(K_9, "9", lambda: ("Boss -25% HP", boss_value()), boss_damage)
         entry(K_0, "0", lambda: ("Clear enemies", None), lambda: game.level.clear_enemies())
+        entry(K_j, "J", lambda: ("Next stage", game.level.stage), lambda: game.level.next_stage())
         entry(K_n, "N", lambda: ("Auto spawn", game.level.auto_spawn), toggle_auto_spawn)
         entry(K_h, "H", lambda: ("Hitboxes", TestMode.show_hitboxes), toggle_hitboxes)
         entry(K_BACKQUOTE, "`", lambda: ("Hide panel", None), self.toggle_visible)

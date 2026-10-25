@@ -199,6 +199,28 @@ WEAPON = [
 ]
 
 
+# A pair of Lanzer Torpedoes, fins and flames
+TORPEDO = [
+    ".................",
+    ".....#.....#.....",
+    "....#.#...#.#....",
+    "....#.#...#.#....",
+    "....###...###....",
+    "....#.#...#.#....",
+    "....#.#...#.#....",
+    "....#.#...#.#....",
+    "....#.#...#.#....",
+    "...##.##.##.##...",
+    "..#.#.#.#.#.#.#..",
+    "..#.###...###.#..",
+    "..##...#.#...##..",
+    ".....#.....#.....",
+    "....#.#...#.#....",
+    ".....#.....#.....",
+    ".................",
+]
+
+
 def radiation_icon(size=17):
     filled = canvas(size, size)
     c = (size - 1) / 2
@@ -223,7 +245,7 @@ def equip_icon(draw, path):
 def equip_panel():
     c = canvas(50, 99)
     panel(c, [(0, 0), (40, 0), (46, 6), (46, 26), (49, 29), (49, 62), (46, 65), (46, 92), (39, 98), (0, 98)])
-    # Three display slots (icons drawn by the game at (16, 24) and (16, 76), 42x42)
+    # Three display slots (icons drawn by the game at (16, 24), (16, 76) and (16, 128), 42x42)
     for y in (11, 37, 63):
         recess(c, (7, y, 23, 23))
         screen(c, (8, y + 1, 21, 21))
@@ -238,6 +260,7 @@ def equip_panel():
     save(c, "Equip/Left.png")
     equip_icon(lambda s: bitmap(s, 2, 2, WEAPON, GREEN), "Equip/Weapon0.png")
     equip_icon(lambda s: s.blit(radiation_icon(), (2, 2)), "Equip/Bomb0.png")
+    equip_icon(lambda s: bitmap(s, 2, 2, TORPEDO, CYAN), "Equip/Torpedo0.png")
 
 
 def equip_lights():
