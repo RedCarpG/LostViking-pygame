@@ -19,6 +19,8 @@ import os
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
+from shading import BAYER, mask_of, distance, shade, outline, seam, silhouette, darken, save_sheet
+
 OUT = "src/asset/image/Enemy/Oracle"
 FRAMES = 6
 
@@ -32,8 +34,6 @@ COPPER = [(147, 42, 42), (186, 69, 41), (212, 102, 33), (223, 118, 53), (235, 14
 VIOLET = [(48, 30, 110), (75, 44, 155), (72, 59, 176), (80, 90, 186), (79, 121, 190), (91, 138, 200), (159, 194, 239)]
 CYAN = [(24, 133, 138), (97, 225, 231), (4, 244, 255), (146, 250, 255), (235, 254, 255)]
 WHITE = (246, 246, 246)
-LIGHT = (-0.55, -0.75)
-BAYER = ((0, 8, 2, 10), (12, 4, 14, 6), (3, 11, 1, 9), (15, 7, 13, 5))
 
 
 def mirror(points):
@@ -43,67 +43,6 @@ def mirror(points):
 
 def mirror_part(points):
     return [points, [(W - 1 - x, y) for x, y in points]]
-
-
-def mask_of(polygons):
-    s = pygame.Surface((W, H), pygame.SRCALPHA)
-    for poly in polygons:
-        pygame.draw.polygon(s, (255, 255, 255), poly)
-    m = pygame.mask.from_surface(s)
-    return {(x, y) for y in range(H) for x in range(W) if m.get_at((x, y))}
-
-
-def distance(mask):
-    """ Steps to the outside of the mask (4 neighbours) """
-    d = {}
-    frontier = [p for p in mask if any((p[0] + dx, p[1] + dy) not in mask
-                                       for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
-    for p in frontier:
-        d[p] = 1
-    level = 1
-    while frontier:
-        nxt = []
-        for x, y in frontier:
-            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
-                q = (x + dx, y + dy)
-                if q in mask and q not in d:
-                    d[q] = level + 1
-                    nxt.append(q)
-        frontier = nxt
-        level += 1
-    return d
-
-
-def shade(canvas, mask, ramp, bevel=3.0, gradient=0.25, bias=0.0, contrast=1.6, dither=0.12):
-    d = distance(mask)
-
-    def h(p):
-        return min(d.get(p, 0), bevel) / bevel
-
-    for (x, y) in mask:
-        nx = -(h((x + 1, y)) - h((x - 1, y))) / 2
-        ny = -(h((x, y + 1)) - h((x, y - 1))) / 2
-        light = nx * LIGHT[0] + ny * LIGHT[1]
-        value = 0.55 + light * contrast + bias - gradient * (y / H - 0.4)
-        value += (BAYER[y & 3][x & 3] / 16 - 0.5) * dither
-        index = max(0, min(len(ramp) - 1, int(value * len(ramp))))
-        canvas.set_at((x, y), ramp[index])
-
-
-def outline(canvas, mask):
-    for y in range(H):
-        for x in range(W):
-            if (x, y) in mask:
-                continue
-            if any((x + dx, y + dy) in mask for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
-                canvas.set_at((x, y), OUTLINE)
-
-
-def seam(canvas, mask_a, mask_b, color=OUTLINE):
-    """ Dark line where part a touches part b """
-    for (x, y) in mask_a:
-        if any((x + dx, y + dy) in mask_b for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
-            canvas.set_at((x, y), color)
 
 
 # ------------------ Parts ------------------
@@ -117,9 +56,9 @@ NOZZLES = [(26, 5, 4, 5), (34, 5, 4, 5)]
 
 def base_ship():
     canvas = pygame.Surface((W, H), pygame.SRCALPHA)
-    hull = mask_of([HULL])
-    claws = mask_of(mirror_part(CLAW_L)) - hull
-    fins = mask_of(mirror_part(FIN_L)) - hull
+    hull = mask_of([HULL], (W, H))
+    claws = mask_of(mirror_part(CLAW_L), (W, H)) - hull
+    fins = mask_of(mirror_part(FIN_L), (W, H)) - hull
     nozzles = set()
     for x0, y0, w, h in NOZZLES:
         nozzles |= {(x, y) for x in range(x0, x0 + w) for y in range(y0, y0 + h)}
@@ -137,8 +76,8 @@ def base_ship():
                 canvas.set_at((x, y), COPPER[5] if y < 50 else COPPER[3])
     shade(canvas, hull, COPPER, bevel=4.0, contrast=2.2, dither=0.05)
     shade(canvas, nozzles, COPPER, bevel=1.5, bias=-0.2)
-    seam(canvas, claws, hull)
-    seam(canvas, fins, hull)
+    seam(canvas, claws, hull, OUTLINE)
+    seam(canvas, fins, hull, OUTLINE)
 
     # Ridge along the hull, panel lines
     for y in range(11, 25):
@@ -160,7 +99,7 @@ def base_ship():
         canvas.set_at((x, y), CYAN[2])
         canvas.set_at((W - 1 - x, y), CYAN[2])
 
-    outline(canvas, everything)
+    outline(canvas, everything, OUTLINE)
     return canvas, everything
 
 
@@ -226,11 +165,6 @@ def frame(index):
 
 # ------------------ Sheets ------------------
 
-def silhouette(surface, color, alpha):
-    mask = pygame.mask.from_surface(surface)
-    return mask.to_surface(setcolor=(*color, alpha), unsetcolor=(0, 0, 0, 0))
-
-
 def attack_frame(ship, index):
     """ Glints gathering at the crystal and the claw tips, brighter every frame """
     c = pygame.Surface(ship.get_size(), pygame.SRCALPHA)
@@ -250,35 +184,19 @@ def attack_frame(ship, index):
     return c
 
 
-def destroy_frame(ship, index):
-    """ Darkens step by step, the last frames are dark silhouettes """
-    levels = (255, 200, 150, 105, 60, 0)
-    c = ship.copy()
-    v = levels[index]
-    c.fill((v, v, v), special_flags=pygame.BLEND_RGB_MULT)
-    if index >= 4:
-        c = silhouette(ship, (12, 8, 16) if index == 5 else (34, 24, 30), 255)
-    return c
-
-
-def save_sheet(frames, name):
-    sheet = pygame.Surface((W * len(frames), frames[0].get_height()), pygame.SRCALPHA)
-    for i, f in enumerate(frames):
-        sheet.blit(f, (i * W, 0))
-    path = os.path.join(OUT, f"Oracle{name}.png")
-    pygame.image.save(sheet, path)
-    print(f"saved {path} {sheet.get_size()}")
+def sheet_path(name):
+    return os.path.join(OUT, f"Oracle{name}.png")
 
 
 def main():
     pygame.init()
     os.makedirs(OUT, exist_ok=True)
     normal = [frame(i) for i in range(FRAMES)]
-    save_sheet(normal, "Normal")
-    save_sheet([normal[0]] * FRAMES, "Base")
-    save_sheet([silhouette(normal[0], (190, 24, 24), a) for a in (150, 200, 160, 120, 80, 40)], "Hit")
-    save_sheet([attack_frame(normal[0], i) for i in range(FRAMES)], "Attack")
-    save_sheet([destroy_frame(normal[0], i) for i in range(FRAMES)], "Destroy")
+    save_sheet(normal, sheet_path("Normal"))
+    save_sheet([normal[0]] * FRAMES, sheet_path("Base"))
+    save_sheet([silhouette(normal[0], (190, 24, 24), a) for a in (150, 200, 160, 120, 80, 40)], sheet_path("Hit"))
+    save_sheet([attack_frame(normal[0], i) for i in range(FRAMES)], sheet_path("Attack"))
+    save_sheet([darken(normal[0], i) for i in range(FRAMES)], sheet_path("Destroy"))
 
 
 if __name__ == "__main__":

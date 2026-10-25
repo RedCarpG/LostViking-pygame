@@ -8,8 +8,8 @@ It warps in, darts around the top of the screen and uses its two abilities:
   hurt it either (as in StarCraft II). Wards can be shot down. The Oracle likes to aim its beam
   where a frozen plane will be when the stasis ends
 It is armored, as in StarCraft II: the Lanzer Torpedoes hurt it more.
-The ship sheets are made by tools/pixel_art/make_oracle.py; the beam, the ward, the stasis
-crystal and the warp-in are drawn here in code as pixel art (see prepare).
+The ship sheets are made by tools/pixel_art/make_oracle.py; the beam, the ward and the stasis
+crystal are drawn here in code as pixel art (see prepare), the warp-in in WarpIn.py.
 """
 import math
 import random
@@ -23,11 +23,12 @@ from src.game.enemy import EnemyI
 from src.game.groups import G_Enemy_Bullets, G_Effects, G_Player1
 from src.helper.image import get_image
 from src.helper.sound import play_sound
-from src.game.animation import AttachEffect, Effect, FloatingText, warmup
+from src.game.animation import AttachEffect, Effect, FloatingText, Spark, warmup
 from src.game.animation.FloatingText import WEAPON_COLOR
 from src.game.animation.pixel_fx import PIXEL, canvas, upscale, dither
 from src.util.angle import turn_toward
 from src.util.type import Pos, Size
+from .WarpIn import WarpIn
 
 # Palette (the Protoss energy of the other ships)
 WHITE = (235, 254, 255)
@@ -266,7 +267,7 @@ class EnemyOracle(EnemyI):
                 pos = (random.randint(cls.AREA.left, cls.AREA.right), random.randint(cls.AREA.top, cls.AREA.bottom))
                 if player is None or abs(pos[0] - player.rect.centerx) > 200:
                     break
-        WarpIn(pos, lambda: cls(Pos(pos)))
+        WarpIn(pos, lambda: cls(Pos(pos)), WarpIn.first_frame(get_image("Enemy/Oracle/OracleNormal.png")))
 
     # --------------- Behavior --------------- #
     def action(self, *args, **kwargs) -> None:
@@ -566,103 +567,8 @@ class StasisShell(Sprite):
     def update(self) -> None:
         self._age += 1
         if self._age >= self._duration or not self.player.in_stasis:
-            for k in range(self.SHARDS):
-                CrystalShard(self.rect.center, Vector2(0, 1).rotate(k * 360 / self.SHARDS + random.uniform(-10, 10))
-                             * random.uniform(3, 6))
+            Spark.shards(self.rect.center, self.SHARDS, (WHITE, LAVENDER, BLUE))
             self.kill()
             return
         self.image = self._frames[(self._age // self.FRAME_TIME) % len(self._frames)]
         self.rect = self.image.get_rect(center=self.player.rect.center)
-
-
-_shard_images = {}
-
-
-class CrystalShard(Sprite):
-    """ A piece of the shattered stasis crystal """
-
-    LIFE = 16
-    COLORS = (WHITE, LAVENDER, BLUE)
-
-    def __init__(self, pos, velocity) -> None:
-        super().__init__(G_Effects)
-        self._pos = Vector2(pos)
-        self._velocity = Vector2(velocity)
-        self._age = 0
-        self.image = self._image(0)
-        self.rect = self.image.get_rect(center=pos)
-
-    @staticmethod
-    def _image(index):
-        image = _shard_images.get(index)
-        if image is None:
-            image = canvas(PIXEL * 2, PIXEL * 2)
-            image.fill(CrystalShard.COLORS[index])
-            _shard_images[index] = image
-        return image
-
-    def update(self) -> None:
-        self._age += 1
-        if self._age >= self.LIFE:
-            self.kill()
-            return
-        self._pos += self._velocity
-        self._velocity *= 0.88
-        self.image = self._image(min(len(self.COLORS) - 1, self._age * len(self.COLORS) // self.LIFE))
-        self.rect.topleft = (int(self._pos.x) // PIXEL * PIXEL, int(self._pos.y) // PIXEL * PIXEL)
-
-
-# --------------- Warp-in --------------- #
-class WarpIn(Sprite):
-    """ Protoss warp-in: a ring of light closes in, the ship's shape fills from the top in
-    bright cyan, then `spawn` is called and the ship is there
-    """
-
-    DURATION = 40
-    RING_FRAMES = 18
-    SIZE = 140
-
-    GROUP = Group()
-    # Cyan silhouette of the Oracle, made once
-    _shape = None
-
-    def __init__(self, pos, spawn) -> None:
-        super().__init__(G_Effects, self.GROUP)
-        if WarpIn._shape is None:
-            ship = get_image("Enemy/Oracle/OracleNormal.png").subsurface((0, 0, 64, 88))
-            WarpIn._shape = pygame.mask.from_surface(ship).to_surface(setcolor=(*CYAN_LIGHT, 255),
-                                                                      unsetcolor=(0, 0, 0, 0))
-        self._spawn = spawn
-        self._center = (round(pos[0]), round(pos[1]))
-        self._age = 0
-        self.image = canvas(self.SIZE, self.SIZE)
-        self.rect = self.image.get_rect(center=self._center)
-        play_sound("PHOENIX_ARRIVE")
-        self._render()
-
-    def update(self) -> None:
-        self._age += 1
-        if self._age >= self.DURATION:
-            self._spawn()
-            self.kill()
-            return
-        self._render()
-
-    def _render(self):
-        t = self._age / self.DURATION
-        c = self.image
-        c.fill((0, 0, 0, 0))
-        middle = self.SIZE // 2
-        if self._age < self.RING_FRAMES:
-            r = self._age / self.RING_FRAMES
-            radius = int((self.SIZE // 2 - 4) * (1 - r)) // PIXEL * PIXEL + PIXEL * 2
-            pygame.draw.circle(c, WHITE if r > 0.6 else CYAN, (middle, middle), radius, PIXEL)
-        # The shape fills from the top, the filled part fading toward the end
-        shape = self._shape
-        reveal = int(shape.get_height() * min(1.0, max(0.0, (t - 0.25) / 0.6)))
-        if reveal > 0:
-            top_left = (middle - shape.get_width() // 2, middle - shape.get_height() // 2)
-            part = shape.subsurface((0, 0, shape.get_width(), reveal)).copy()
-            part.set_alpha(int(220 * (1 - max(0.0, t - 0.75) * 3)))
-            c.blit(part, top_left)
-            c.fill(WHITE, (top_left[0] + 8, top_left[1] + reveal - PIXEL, shape.get_width() - 16, PIXEL))
